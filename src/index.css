@@ -1,0 +1,161 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: 'TotallyGothic';
+  src: url('https://cdn.jsdelivr.net/gh/MindofCrayak/Konran-Fonts@main/TotallyGothic/TotallyGothic%20Regular/TotallyGothic%20Regular.ttf') format('truetype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'TemaCantante';
+  src: url('https://cdn.jsdelivr.net/gh/MindofCrayak/Konran-Fonts@main/TemaCantante/TemaCantante%20Regular/TemaCantante%20Regular.ttf') format('truetype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'TemplateGothic';
+  src: url('https://cdn.jsdelivr.net/gh/MindofCrayak/Konran-Fonts@main/TemplateGothic/TemplateGothic%20Regular/TemplateGothic%20Regular.ttf') format('truetype');
+  font-display: swap;
+}
+
+:root {
+  --magitech-green: #39ff14;
+  --magitech-green-dim: #21990c;
+  --glowing-gold: #ffcc00;
+  --glowing-gold-dim: rgba(255, 204, 0, 0.35);
+  --screen-green-top: rgba(22, 54, 32, 0.90);
+  --screen-green-bottom: rgba(8, 20, 12, 0.97);
+  --space-dark: #020205;
+  --lavender: #ded7f0;
+  
+  --color-purple: #540162;
+  --color-mint: #bcdbb0;
+  --color-teal: #0d9488;
+}
+
+/* Custom Typography Utility Classes */
+.font-totally-gothic {
+  font-family: 'TotallyGothic', 'Cinzel', Georgia, serif;
+}
+
+.font-tema-cantante {
+  font-family: 'TemaCantante', Georgia, serif;
+}
+
+.font-template-gothic {
+  font-family: 'TemplateGothic', sans-serif;
+}
+
+.font-Oray { font-family: 'Berkshire Swash', cursive; }
+.font-Ousava { font-family: 'Allura', cursive; }
+.font-Lyricia { font-family: 'Aguafina Script', cursive; }
+.font-Celeste { font-family: 'New Rocker', cursive; }
+.font-Ay { font-family: 'Mystery Quest', cursive; }
+.font-Kayzoku { font-family: 'Neucha', cursive; }
+.font-Krayvuk { font-family: 'Press Start 2P', monospace; }
+.font-Slavyna { font-family: 'Ruthie', cursive; }
+.font-Psyon { font-family: 'Creepster', cursive; }
+
+/* The Nyne Glitch Effect */
+.nyne-glitch {
+  font-family: 'TemaCantante', serif !important;
+  color: var(--color-purple);
+  font-weight: bold;
+  text-shadow: 
+    -1.5px -1.5px 0px var(--color-mint), 
+    2px 1.5px 0px var(--lavender), 
+    -2.5px 1px 0px var(--color-teal), 
+    1.5px -2px 0px rgba(212, 175, 55, 0.7), 
+    0px 0px 4px var(--color-purple), 
+    0px 0px 12px rgba(84, 1, 98, 0.4);
+}
+
+/* Animations */
+@keyframes magitech-boot {
+  0% {
+    opacity: 0;
+    box-shadow: 0 0 0 rgba(57, 255, 20, 0), inset 0 0 0 rgba(57, 255, 20, 0);
+    filter: brightness(0.2);
+  }
+  15% {
+    opacity: 1;
+    box-shadow: 0 0 60px rgba(57, 255, 20, 0.8), inset 0 0 80px rgba(57, 255, 20, 0.6);
+    filter: brightness(1.5);
+  }
+  30% {
+    box-shadow: 0 0 15px rgba(57, 255, 20, 0.1), inset 0 0 20px rgba(57, 255, 20, 0.1);
+    filter: brightness(0.9);
+  }
+  100% {
+    box-shadow: 0 0 30px rgba(57, 255, 20, 0.2), inset 0 0 40px rgba(57, 255, 20, 0.1);
+    filter: brightness(1);
+  }
+}
+
+@keyframes analog-flicker {
+  0%, 96%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 30px rgba(57, 255, 20, 0.2), inset 0 0 40px rgba(57, 255, 20, 0.1);
+  }
+  96.5% {
+    opacity: 0.85;
+    box-shadow: 0 0 10px rgba(57, 255, 20, 0.1), inset 0 0 15px rgba(57, 255, 20, 0.05);
+  }
+  97.5% {
+    opacity: 1;
+    box-shadow: 0 0 45px rgba(57, 255, 20, 0.4), inset 0 0 55px rgba(57, 255, 20, 0.2);
+  }
+  98% {
+    opacity: 0.9;
+    box-shadow: 0 0 20px rgba(57, 255, 20, 0.15), inset 0 0 25px rgba(57, 255, 20, 0.1);
+  }
+  99% {
+    opacity: 1;
+    box-shadow: 0 0 35px rgba(57, 255, 20, 0.25), inset 0 0 45px rgba(57, 255, 20, 0.15);
+  }
+}
+
+.magitech-glow-box {
+  animation: magitech-boot 1.2s ease-out forwards, analog-flicker 90s linear infinite 1.2s;
+}
+
+/* Subtle CRT Scanlines */
+.crt-overlay {
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.25) 50%
+  ), linear-gradient(
+    90deg,
+    rgba(255, 0, 0, 0.03),
+    rgba(0, 255, 0, 0.01),
+    rgba(0, 0, 255, 0.03)
+  );
+  background-size: 100% 3px, 6px 100%;
+  pointer-events: none;
+}
+
+/* Custom Scrollbar for Terminals */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(10, 25, 15, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 204, 0, 0.3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 204, 0, 0.6);
+}
+
+@media print {
+  body {
+    background: #08140c !important;
+    color: #ffcc00 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

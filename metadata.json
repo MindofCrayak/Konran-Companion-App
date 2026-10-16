@@ -1,0 +1,8 @@
+{
+  "name": "Konra App",
+  "description": "Magitech D&D 5.5 setting manager, deity alignment trials, K.A.M.P. prep academy roster, faction dossiers, and classified redaction engine.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
