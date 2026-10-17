@@ -14,6 +14,7 @@ import {
 import { useCharacter } from '../context/CharacterContext';
 import { playKeyClick } from '../utils/audio';
 import { KonranGlobe } from './KonranGlobe';
+import { GrandChronometronModal } from './GrandChronometronModal';
 import './SlabletDesktop.css';
 
 interface SlabletDesktopProps {
@@ -26,7 +27,8 @@ const getKonranTime = (timestamp: number) => {
   const now = new Date(timestamp);
   const earthSeconds =
     now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
-  const konranSeconds = Math.floor(earthSeconds * (32 / 24));
+  // 36-hour Konran day scaled from 24-hour Earth day
+  const konranSeconds = Math.floor(earthSeconds * (36 / 24));
   const hours = Math.floor(konranSeconds / 3600);
   const minutes = Math.floor((konranSeconds % 3600) / 60);
   const seconds = konranSeconds % 60;
@@ -42,6 +44,7 @@ export const SlabletDesktop = ({
   const { account, activeCharacter } = useCharacter();
   const [now, setNow] = useState(() => Date.now());
   const [notice, setNotice] = useState('');
+  const [showChronometron, setShowChronometron] = useState(false);
   const noticeTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -77,6 +80,7 @@ export const SlabletDesktop = ({
             <p className="slablet-system-name">SLABLET // CELESTIAL ARRAY</p>
           </div>
         </div>
+
         <div className="slablet-character">
           <CircleUserRound aria-hidden="true" />
           <span>
@@ -84,10 +88,19 @@ export const SlabletDesktop = ({
             <strong>{activeCharacter?.name || account.displayName || 'Undeclared Persona'}</strong>
           </span>
         </div>
-        <div className="slablet-clock">
+
+        {/* CLICKABLE CHRONOMETRON HUD TRIGGER */}
+        <div 
+          className="slablet-clock cursor-pointer hover:brightness-125 transition-all"
+          onClick={() => {
+            playKeyClick();
+            setShowChronometron(true);
+          }}
+          title="Click to engage Grand Chronometron"
+        >
           <span className="slablet-clock-icon"><Activity aria-hidden="true" /></span>
           <span>
-            <small>KONRAN ROTATION // 32H</small>
+            <small>KONRAN ROTATION // 36H</small>
             <strong>{getKonranTime(now)}</strong>
           </span>
         </div>
@@ -116,6 +129,7 @@ export const SlabletDesktop = ({
           <span><small>ARCHIVE 01</small><strong>Pantheon Codex</strong></span>
           <ArrowUpRight aria-hidden="true" className="module-arrow" />
         </button>
+
         <button
           className="slablet-module slablet-module--kamp"
           onClick={() => showUnlinkedNotice('K.A.M.P. TERMINAL')}
@@ -124,6 +138,7 @@ export const SlabletDesktop = ({
           <span><small>ACADEMIC NETWORK</small><strong>K.A.M.P. Terminal</strong></span>
           <ArrowUpRight aria-hidden="true" className="module-arrow" />
         </button>
+
         <button
           className="slablet-module slablet-module--exchange"
           onClick={() => showUnlinkedNotice('OBSYDIAN EXCHANGE')}
@@ -132,6 +147,7 @@ export const SlabletDesktop = ({
           <span><small>MARKET UPLINK</small><strong>Obsydian Exchange</strong></span>
           <ArrowUpRight aria-hidden="true" className="module-arrow" />
         </button>
+
         <button
           className="slablet-module slablet-module--fated"
           onClick={() => { playKeyClick(); onOpenTrials(); }}
@@ -143,6 +159,12 @@ export const SlabletDesktop = ({
 
         {notice && <div className="slablet-notice" role="status">{notice}</div>}
       </section>
+
+      {/* CHRONOMETRON OVERLAY */}
+      <GrandChronometronModal 
+        isOpen={showChronometron} 
+        onClose={() => setShowChronometron(false)} 
+      />
 
       <footer className="slablet-footer">
         <div className="slablet-coordinates">
