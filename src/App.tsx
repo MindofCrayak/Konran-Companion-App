@@ -13,6 +13,8 @@ import { PartyVaultModal } from './components/PartyVaultModal';
 import { CrossroadsModal } from './components/CrossroadsModal';
 import { DossierView } from './components/DossierView';
 import { FatedCharacterBadge } from './components/FatedCharacterBadge';
+import { ReputationTrackerModal } from './components/ReputationTrackerModal';
+import { SlabletDesktop } from './components/SlabletDesktop';
 import { QUESTIONS } from './data/questions';
 import { QuizScores, PartyCharacterResult, NyneDeityId } from './types';
 import { useCharacter } from './context/CharacterContext';
@@ -58,6 +60,8 @@ export default function App() {
   const [isCodexOpen, setIsCodexOpen] = useState(false);
   const [codexDeityId, setCodexDeityId] = useState<string | undefined>(undefined);
   const [isPartyVaultOpen, setIsPartyVaultOpen] = useState(false);
+  const [isTrialsOverlayOpen, setIsTrialsOverlayOpen] = useState(false);
+  const [isReputationOpen, setIsReputationOpen] = useState(false);
   const [audioActive, setAudioActive] = useState<boolean>(getAudioEnabled());
 
   const handleToggleSound = () => {
@@ -225,6 +229,26 @@ export default function App() {
   const progressPercent = ((currentQIndex) / QUESTIONS.length) * 100;
 
   return (
+    <>
+    <SlabletDesktop
+      onOpenCodex={() => handleOpenCodex()}
+      onOpenTrials={() => setIsTrialsOverlayOpen(true)}
+      onOpenReputation={() => setIsReputationOpen(true)}
+    />
+    {isTrialsOverlayOpen && (
+    <div
+      className="fixed inset-0 z-40 overflow-y-auto bg-black/90 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Fated Badge and Trials"
+    >
+      <button
+        onClick={() => setIsTrialsOverlayOpen(false)}
+        className="fixed right-4 top-4 z-[70] rounded border border-[#39ff14]/40 bg-black/90 px-3 py-2 font-mono text-xs text-[#39ff14] hover:bg-[#39ff14]/10"
+        aria-label="Close Fated Badge and Trials"
+      >
+        Return to Spatial OS
+      </button>
     <div 
       className="min-h-screen w-full flex flex-col justify-between pb-10 bg-[#020205] relative overflow-x-hidden"
       style={{
@@ -510,13 +534,6 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Codex Modal */}
-      <CodexModal
-        isOpen={isCodexOpen}
-        onClose={() => setIsCodexOpen(false)}
-        initialDeityId={codexDeityId}
-      />
-
       {/* Party Vault Modal */}
       <PartyVaultModal
         isOpen={isPartyVaultOpen}
@@ -525,5 +542,17 @@ export default function App() {
       />
 
     </div>
+    </div>
+    )}
+    <CodexModal
+      isOpen={isCodexOpen}
+      onClose={() => setIsCodexOpen(false)}
+      initialDeityId={codexDeityId}
+    />
+    <ReputationTrackerModal
+      isOpen={isReputationOpen}
+      onClose={() => setIsReputationOpen(false)}
+    />
+    </>
   );
 }
