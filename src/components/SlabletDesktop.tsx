@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useCharacter } from '../context/CharacterContext';
 import { playKeyClick } from '../utils/audio';
+import { getKonranGrandState } from '../utils/celestial';
 import { KonranGlobe } from './KonranGlobe';
 import { GrandChronometronModal } from './GrandChronometronModal';
 import './SlabletDesktop.css';
@@ -21,28 +22,6 @@ interface SlabletDesktopProps {
   onOpenTrials: () => void;
   onOpenReputation: () => void;
 }
-
-// 36-hour Konran time calculation to hand angles
-const getKonranAngles = (timestamp: number) => {
-  const now = new Date(timestamp);
-  const earthSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
-  
-  // 36h Konran day scaled from 24h Earth day
-  const konranSeconds = Math.floor(earthSeconds * (36 / 24));
-  const s = konranSeconds % 60;
-  const totalMinutes = Math.floor(konranSeconds / 60);
-  const m = totalMinutes % 60;
-  const h = Math.floor(totalMinutes / 60);
-
-  const passHour = h % 18; // 18 hours per dial pass
-
-  return {
-    hourAngle: passHour * 20 + (m / 60) * 20,
-    minuteAngle: m * 6 + (s / 60) * 6,
-    secondAngle: s * 6,
-    isNightwatch: h >= 18,
-  };
-};
 
 export const SlabletDesktop = ({
   onOpenCodex,
@@ -74,7 +53,8 @@ export const SlabletDesktop = ({
     }, 2600);
   };
 
-  const { hourAngle, minuteAngle, secondAngle, isNightwatch } = getKonranAngles(now);
+  const celestialState = getKonranGrandState(now);
+  const { hourAngle, minuteAngle, secondAngle, isNightwatch, timeString, liturgicalDay } = celestialState;
 
   return (
     <main className="slablet-desktop">
@@ -82,6 +62,7 @@ export const SlabletDesktop = ({
       <div className="slablet-vignette" aria-hidden="true" />
       <div className="slablet-crt" aria-hidden="true" />
 
+      {/* 1. TOP HUD HEADER */}
       <header className="slablet-hud">
         <div className="slablet-brand">
           <span className="slablet-status-light" />
@@ -99,7 +80,7 @@ export const SlabletDesktop = ({
           </span>
         </div>
 
-        {/* TOP-RIGHT MINI ANALOG CHRONOMETRON HUD TRIGGER */}
+        {/* TOP-RIGHT MINI ANALOG CHRONOMETRON */}
         <div 
           className="flex items-center gap-3.5 cursor-pointer group bg-black/60 px-3 py-1.5 rounded-xl border border-[#5e3b1c]/80 hover:border-[#ffd700] hover:shadow-[0_0_20px_rgba(212,175,55,0.4)] transition-all"
           onClick={() => {
@@ -108,16 +89,15 @@ export const SlabletDesktop = ({
           }}
           title="Grand Chronometron // Click to expand horologium"
         >
-          {/* Luminous Analog Dial */}
+          {/* Analog Dial */}
           <div className="relative w-16 h-16 sm:w-18 sm:h-18 rounded-full border-[3px] border-[#8b6508] bg-[#030804] shadow-[0_0_15px_rgba(57,255,20,0.45)] group-hover:border-[#ffd700] group-hover:shadow-[0_0_25px_#ffd700] transition-all flex items-center justify-center overflow-hidden select-none">
-            {/* Illuminated Clock Face */}
             <img 
               src="/assests/clock-face.png" 
               alt="Konran Chronometer"
               className="absolute inset-0 w-full h-full object-cover filter contrast-150 brightness-110"
             />
 
-            {/* Hour Spade Hand (High Contrast Gold) */}
+            {/* Hour Spade Hand */}
             <div 
               className="absolute pointer-events-none transition-transform duration-75 z-10"
               style={{ 
@@ -136,7 +116,7 @@ export const SlabletDesktop = ({
               />
             </div>
 
-            {/* Minute Lance (Silver Lance) */}
+            {/* Minute Lance */}
             <div 
               className="absolute pointer-events-none transition-transform duration-75 z-20"
               style={{ 
@@ -174,7 +154,7 @@ export const SlabletDesktop = ({
               />
             </div>
 
-            {/* Center Gem Pivot */}
+            {/* Center Pivot */}
             <div className="absolute w-2.5 h-2.5 rounded-full bg-[#ffd700] border border-white z-40 shadow-[0_0_6px_#ffd700] flex items-center justify-center pointer-events-none">
               <div className="w-1 h-1 rounded-full bg-[#39ff14]" />
             </div>
@@ -182,15 +162,38 @@ export const SlabletDesktop = ({
 
           {/* Telemetry Badge */}
           <div className="flex flex-col text-left font-mono leading-tight">
-            <span className="text-[10px] text-[#a78b54] tracking-widest uppercase group-hover:text-[#ffd700] transition-colors">
-              Chronometron
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-[#a78b54] tracking-widest uppercase group-hover:text-[#ffd700] transition-colors">
+                Chronometron
+              </span>
+              <span className="text-[9px] text-[#ffdf79] opacity-75">
+                {timeString}
+              </span>
+            </div>
             <span className="text-xs text-[#39ff14] font-bold">
               {isNightwatch ? 'PASS II // NIGHT' : 'PASS I // DAY'}
             </span>
-            <span className="text-[10px] text-[#ffdf79] opacity-80">
-              CLICK TO EXPAND
+            <span className="text-[9.5px] text-[#ffd700] opacity-90 truncate max-w-[120px]">
+              {liturgicalDay.name} ({liturgicalDay.god})
             </span>
+          </div>
+        </div>
+      </header>
+
+      {/* 2. MAIN ORBIT STAGE (Globe + 4 Surrounding Modules) */}
+      <section className="slablet-orbit-stage" aria-label="Konran planetary desktop">
+        <div className="slablet-orbit slablet-orbit--outer" aria-hidden="true" />
+        <div className="slablet-orbit slablet-orbit--inner" aria-hidden="true" />
+        
+        <div className="slablet-globe-frame">
+          <div className="slablet-globe-label">
+            <span className="slablet-status-light" />
+            KONRAN // LIVE ORBIT
+          </div>
+          <KonranGlobe />
+          <div className="slablet-moon-labels" aria-label="Orbiting moons">
+            <span><i className="moon-dot moon-dot--amber" /> OLYSPHERE</span>
+            <span><i className="moon-dot moon-dot--violet" /> AYANATH</span>
           </div>
         </div>
 
@@ -239,6 +242,7 @@ export const SlabletDesktop = ({
         onClose={() => setShowChronometron(false)} 
       />
 
+      {/* 3. FOOTER */}
       <footer className="slablet-footer">
         <div className="slablet-coordinates">
           <Compass aria-hidden="true" />
