@@ -862,6 +862,7 @@ export const SlabletDesktop = ({
         </div>
       </footer>
       <div className="slablet-signal"><Radio aria-hidden="true" /> MAGITECH SIGNAL STABLE</div>
+      </section>
     </main>
   );
 };
