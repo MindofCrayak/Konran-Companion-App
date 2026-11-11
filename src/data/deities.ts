@@ -260,13 +260,13 @@ export const DEITIES: Record<string, DeityExtended> = {
 
   Celeste: {
     id: "Celeste",
-    name: "Vevayun (Celeste)",
+    name: "Vyvain (Celeste)",
     title: "Goddess of Arts, Competition, Hearth & War",
     alignment: "Chaotic Good (CG) • Divine Champion of Expression & Glory",
     dndAlignment: "CG",
     aspects: ["Arts", "Competition", "Hearth", "War", "Athletics", "Heroism"],
     domains: "Arts, Competition, Hearth, War, Athletics, Expression",
-    desc: "Known as Vevayun (and invoked as Celeste in liturgical anthems), she is the muse of artists, poets, and honorable gladiators. She governs the twin fires of passion: the creative forge of beauty and the valorous steel of war.",
+    desc: "Known as Vyvain (and invoked as Celeste in older liturgical anthems), she is the muse of artists, poets, and honorable gladiators. She governs the twin fires of passion: the creative forge of beauty and the valorous steel of war.",
     color: "#00cccc",
     fontClass: "font-Celeste",
     imgBW: "https://i.imgur.com/I5sUz2U.png",

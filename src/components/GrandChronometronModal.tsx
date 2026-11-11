@@ -6,6 +6,7 @@ import { playKeyClick, playOptionSelect } from '../utils/audio';
 interface GrandChronometronModalProps {
   isOpen: boolean;
   onClose: () => void;
+  isEmbedded?: boolean;
 }
 
 // 18 Roman Numerals around the outer perimeter:
@@ -28,6 +29,35 @@ const ROMAN_HOURS: { hour: number; numeral: string; angle: number }[] = [
   { hour: 15, numeral: 'XV',   angle: 300 },
   { hour: 16, numeral: 'XVI',  angle: 320 },
   { hour: 17, numeral: 'XVII', angle: 340 },
+];
+
+// The 9 Canonical Months (Short Codes & Glyphs)
+const MONTH_DATA = [
+  { code: 'OUS', name: 'Ousavyn', god: 'Ousava', icon: '🐚' },
+  { code: 'VER', name: 'Verdanya', god: 'Vevayun', icon: '🔱' },
+  { code: 'ETH', name: 'Etheris', god: 'Oray', icon: '👁️' },
+  { code: 'ANV', name: 'Anvylor', god: 'Lyricia', icon: '⚙️' },
+  { code: 'SOL', name: 'Solisvara', god: 'Slavyna', icon: '🗡️' },
+  { code: 'TEM', name: 'Tempestys', god: 'Psyon', icon: '⚡' },
+  { code: 'AEQ', name: 'Aequitas', god: 'Kayzoku', icon: '⛓️' },
+  { code: 'VEL', name: 'Velamyr', god: 'Ayan', icon: '🎭' },
+  { code: 'KRA', name: 'Kraytonis', god: 'Krayvuk', icon: '⌛' },
+];
+
+// The 9 Canonical Liturgical Days (Short Codes & Glyphs)
+const DAY_DATA = [
+  { code: 'PAC', name: 'Pacem', god: 'Vevayun', icon: '🔥' },
+  { code: 'FOR', name: 'Fortudo', god: 'Ousava', icon: '🪷' },
+  { code: 'SUT', name: 'Sutya', god: 'Oray', icon: '📖' },
+  { code: 'VET', name: 'Vetyta', god: 'Lyricia', icon: '📜' },
+  { code: 'JUV', name: 'Juvaus', god: 'Slavyna', icon: '🗝️' },
+  { code: 'AMZ', name: 'Amzytia', god: 'Krayvuk', icon: '☀️' },
+  { code: 'DYS', name: 'Dysci', god: 'Psyon', icon: '🔔' },
+  { code: 'LUD', name: 'Ludus', god: 'Kayzoku', icon: '🎲' },
+  { code: 'GRA', name: 'Gratytudo', god: 'Ayan', icon: '🪞' },
+];
+
+export const GrandChronometronModal: React.FC<GrandChronometronModalProps> = ({ isOpen, onClose, isEmbedded = false }) => {
 ];
 
 // The 9 Canonical Months (Short Codes & Glyphs)
@@ -120,9 +150,20 @@ export const GrandChronometronModal: React.FC<GrandChronometronModalProps> = ({ 
             onClick={onClose}
             className="p-1 rounded text-[#a78b54] hover:text-[#ffd700] hover:bg-white/5 transition-colors cursor-pointer"
           >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+            <div className="flex items-center gap-0.5 text-[5.5px] font-mono uppercase tracking-wider text-[#38bdf8]">
+              <Waves className="w-1.5 h-1.5" />
+              <span>TIDE</span>
+            </div>
+            <div className="relative w-8 h-4 border-t-2 border-x-2 border-[#38bdf8]/40 rounded-t-full flex justify-center items-end">
+              <div 
+                className="absolute bottom-0 w-[1.5px] h-3 bg-[#38bdf8] origin-bottom transition-transform duration-700"
+                style={{ transform: `rotate(${(state.tidalCoefficient - 50) * 1.2}deg)` }}
+              />
+            </div>
+            <span className="text-[6px] font-mono font-bold text-[#ffd700] leading-none uppercase">
+              {state.tidalState}
+            </span>
+          </div>
 
         {/* ============================================================== */}
         {/* THE MASTER HOROLOGIUM DIAL                                     */}
@@ -619,6 +660,20 @@ export const GrandChronometronModal: React.FC<GrandChronometronModalProps> = ({ 
         </div>
 
       </div>
+  );
+
+  if (isEmbedded) {
+    return content;
+  }
+
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/92 backdrop-blur-xl overflow-y-auto selection:bg-[#ffd700] selection:text-black"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Grand Chronometron Horologium"
+    >
+      {content}
     </div>
   );
 };

@@ -60,6 +60,10 @@ export type NyneDeityId =
   | 'Slavyna';
 
 export type KAMPHouseId = 
+  | 'Hydra'
+  | 'Gryffon'
+  | 'Spynx'
+  | 'Unycorn'
   | 'Aethelgard' 
   | 'Pyros' 
   | 'Thalassa' 
@@ -102,10 +106,40 @@ export interface MechanicalBoon {
   recharge: RestRecharge;
 }
 
+export interface FatedLifepathData {
+  primaryDeity: string;
+  aspect: string;
+  aspectMods: string;
+  sect: string;
+  sectDesc: string;
+  secondDeity: string;
+  thirdDeity: string;
+  divineEnemy: string;
+  specialAbilities: string;
+  interests: string;
+  sectStanding: string;
+  fateView: string;
+  greatDeed: string;
+  previousLife: string;
+  familyTies: string;
+  perfectDeath: string;
+  fateScore: number;
+  fameScore: number;
+  favorScore: number;
+  completedAt: string;
+}
+
 export interface KAMPAcademicProfile {
   attended: boolean;
   houseId?: KAMPHouseId;
   houseName?: string;
+  secondaryPath?: KAMPHouseId;
+  houseAdvisor?: string;
+  facultyAdvisor?: string;
+  primaryElective?: string;
+  secondaryElective?: string;
+  continuationCourse?: string;
+  capstoneCourse?: string;
   yearOfStudy: 'First-Year' | 'Sophomore' | 'Junior' | 'Senior' | 'Alumnus' | 'Expelled';
   majorDiscipline: string;
   academicStanding: 'Distinguished Magus' | 'Honor Roll' | 'Good Standing' | 'Probationary' | 'Blacklisted';
@@ -123,6 +157,37 @@ export interface FactionAffiliation {
   clearanceLevel: 'unclassified' | 'restricted' | 'classified' | 'eyes_only' | 'omniscient';
   unlockedBoons: MechanicalBoon[];
   joinedDate: string;
+}
+
+export interface InventoryItem {
+  id: string;
+  name: string;
+  category: 'Weapon' | 'Armor' | 'Magitech' | 'Relic' | 'Consumable' | 'Gear';
+  quantity: number;
+  weight?: string;
+  valueGp?: number;
+  attuned?: boolean;
+  description?: string;
+  requiredDeity?: NyneDeityId;
+  minimumDevotionTier?: number;
+}
+
+export interface CharacterSheetStats {
+  str: number;
+  dex: number;
+  con: number;
+  int: number;
+  wis: number;
+  cha: number;
+  hpCurrent: number;
+  hpMax: number;
+  tempHp: number;
+  ac: number;
+  speed: number;
+  proficiencyBonus: number;
+  initiativeBonus: number;
+  goldGp: number;
+  hitDice: string;
 }
 
 export interface CharacterProfile {
@@ -148,8 +213,14 @@ export interface CharacterProfile {
   // Alignment & Academy Trials Status
   hasCompletedDeityTrial: boolean;
   hasCompletedKAMPTrial: boolean;
+  hasCompletedLifepath?: boolean;
+  lifepath?: FatedLifepathData;
   quizScores?: QuizScores;
   
+  // 5.5e Character Sheet & Inventory
+  stats?: CharacterSheetStats;
+  inventory?: InventoryItem[];
+
   // Faction & Providence Standings (-3 to +3)
   reputation: Record<string, number>;
   endorsements: Array<{ id: string; name: string; issuer: string; dateEarned: string; icon: string }>;
@@ -175,6 +246,9 @@ export interface PlayerAccount {
   id: string;
   displayName: string;
   handle: string;
+  discordId?: string;
+  discordUsername?: string;
+  discordAvatarUrl?: string;
   activeCharacterId: string | null;
   characterIds: string[];
   role: 'player' | 'dungeon_master' | 'archivist';
@@ -214,5 +288,42 @@ export interface ClearanceEvaluationResult {
   reason: string;
   missingRequirements: string[];
   isCloaked?: boolean;
+}
+
+export type TerminalWindowType = 
+  | 'badge' 
+  | 'codex' 
+  | 'chronometron' 
+  | 'reputation' 
+  | 'kamp' 
+  | 'kamp-quiz'
+  | 'fated-questionnaire'
+  | 'character-sheet'
+  | 'exchange' 
+  | 'party' 
+  | 'notes' 
+  | 'world-lore'
+  | 'economy'
+  | 'discord'
+  | 'allegiance'
+  | 'character-creator'
+  | 'custom';
+
+export interface CanvasWindowState {
+  id: string;
+  title: string;
+  type: TerminalWindowType;
+  isOpen: boolean;
+  isMinimized: boolean;
+  isMaximized: boolean;
+  position: { x: number; y: number };
+  size: { width: number; height: number };
+  zIndex: number;
+  customData?: {
+    accentColor?: string;
+    terminalName?: string;
+    commandLog?: string[];
+    notesText?: string;
+  };
 }
 

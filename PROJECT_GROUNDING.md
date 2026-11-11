@@ -6,7 +6,7 @@
 - Windows, dossiers, and tools render as floating HUD modal containers over the planetary canvas with blurred backdrops and CRT phosphor scanline overlays.
 
 ## 2. Canonical Setting & Mechanics
-- World: Konran, capital planet of the Konra System. 32-hour rotational days, 9-day liturgical weeks named for The Nyne deities.
+- World: Konran, capital planet of the Konra System. 36-hour rotational days, 9-day liturgical weeks named for The Nyne deities.
 - The Nyne Pantheon:
   * Good (The O Order): Lyricia (LG), Ousava (NG), Celeste/Vevayun (CG)
   * Neutral: Oray (LN), Ay (TN), Kayzoku (CN)

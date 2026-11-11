@@ -93,8 +93,14 @@ const createCloudTexture = (): THREE.CanvasTexture => {
   return texture;
 };
 
-export const KonranGlobe = () => {
+interface KonranGlobeProps {
+  onGlobeClick?: () => void;
+}
+
+export const KonranGlobe = ({ onGlobeClick }: KonranGlobeProps = {}) => {
   const mountRef = useRef<HTMLDivElement>(null);
+  const onGlobeClickRef = useRef(onGlobeClick);
+  onGlobeClickRef.current = onGlobeClick;
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -114,7 +120,7 @@ export const KonranGlobe = () => {
 
     // 1. Planetary Surface (Matte PBR standard material)
     const texture = new THREE.TextureLoader().load(
-      '/assests/konran-map.jpg',
+      '/assets/konran-map.jpg',
       undefined,
       undefined,
       (error) => console.error('Unable to load the Konran map texture.', error),
@@ -230,6 +236,9 @@ export const KonranGlobe = () => {
     resizeObserver.observe(mount);
 
     let isDragging = false;
+    let dragDistance = 0;
+    let startX = 0;
+    let startY = 0;
     let previousX = 0;
     let previousY = 0;
     let dragVelocityX = 0;
@@ -237,6 +246,9 @@ export const KonranGlobe = () => {
 
     const onPointerDown = (event: PointerEvent) => {
       isDragging = true;
+      dragDistance = 0;
+      startX = event.clientX;
+      startY = event.clientY;
       previousX = event.clientX;
       previousY = event.clientY;
       renderer.domElement.setPointerCapture(event.pointerId);
@@ -246,6 +258,7 @@ export const KonranGlobe = () => {
       if (!isDragging) return;
       const deltaX = event.clientX - previousX;
       const deltaY = event.clientY - previousY;
+      dragDistance += Math.abs(deltaX) + Math.abs(deltaY);
       planet.rotation.y += deltaX * 0.008;
       planet.rotation.x = THREE.MathUtils.clamp(
         planet.rotation.x + deltaY * 0.008,
@@ -258,7 +271,12 @@ export const KonranGlobe = () => {
       previousY = event.clientY;
     };
 
-    const onPointerUp = () => {
+    const onPointerUp = (event: PointerEvent) => {
+      if (isDragging) {
+        if (dragDistance < 6) {
+          onGlobeClickRef.current?.();
+        }
+      }
       isDragging = false;
     };
 

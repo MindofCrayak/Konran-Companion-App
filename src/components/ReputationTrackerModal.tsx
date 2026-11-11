@@ -21,6 +21,7 @@ import { playKeyClick, playOptionSelect } from '../utils/audio';
 interface ReputationTrackerModalProps {
   isOpen: boolean;
   onClose: () => void;
+  isEmbedded?: boolean;
 }
 
 type EntityCategory = 'all' | 'providence' | 'church' | 'syndicate' | 'law_enforcement';
@@ -28,6 +29,7 @@ type EntityCategory = 'all' | 'providence' | 'church' | 'syndicate' | 'law_enfor
 export const ReputationTrackerModal: React.FC<ReputationTrackerModalProps> = ({
   isOpen,
   onClose,
+  isEmbedded = false,
 }) => {
   const { account, activeCharacter, setReputationScore } = useCharacter();
   const [selectedCategory, setSelectedCategory] = useState<EntityCategory>('all');
@@ -66,12 +68,11 @@ export const ReputationTrackerModal: React.FC<ReputationTrackerModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md">
-      <div 
-        className="relative w-full max-w-4xl max-h-[90vh] flex flex-col bg-[#07130b] border-2 border-[#ffcc00] rounded-sm shadow-[0_0_50px_rgba(255,204,0,0.25)] text-[#ffcc00] font-sans overflow-hidden"
-      >
-        {/* Modal Header */}
+  const content = (
+    <div 
+      className={`relative w-full h-full ${isEmbedded ? '' : 'max-w-4xl max-h-[90vh] border-2 border-[#ffcc00] rounded-sm shadow-[0_0_50px_rgba(255,204,0,0.25)]'} flex flex-col bg-[#07130b] text-[#ffcc00] font-sans overflow-hidden`}
+    >
+      {/* Modal Header */}
         <div className="px-5 py-4 border-b border-[#ffcc00]/30 bg-black/60 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-sm bg-[#ffcc00]/10 border border-[#ffcc00] flex items-center justify-center">
@@ -262,6 +263,15 @@ export const ReputationTrackerModal: React.FC<ReputationTrackerModalProps> = ({
           </button>
         </div>
       </div>
+  );
+
+  if (isEmbedded) {
+    return content;
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md">
+      {content}
     </div>
   );
 };

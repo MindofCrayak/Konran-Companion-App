@@ -33,12 +33,13 @@ interface CodexModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialDeityId?: string;
+  isEmbedded?: boolean;
 }
 
-type MainCodexTab = 'pantheon' | 'world' | 'calendar' | 'alliances';
+type MainCodexTab = 'pantheon' | 'world' | 'races' | 'classes' | 'cities' | 'calendar' | 'alliances';
 type DeitySubTab = 'overview' | 'realm' | 'secrets' | 'notes';
 
-export const CodexModal: React.FC<CodexModalProps> = ({ isOpen, onClose, initialDeityId }) => {
+export const CodexModal: React.FC<CodexModalProps> = ({ isOpen, onClose, initialDeityId, isEmbedded = false }) => {
   const { account, evaluateClearance, activeCharacter, setPlayerNote } = useCharacter();
   const [activeTab, setActiveTab] = useState<MainCodexTab>('pantheon');
   const [selectedDeityId, setSelectedDeityId] = useState<string>(initialDeityId || 'Lyricia');
@@ -88,32 +89,36 @@ export const CodexModal: React.FC<CodexModalProps> = ({ isOpen, onClose, initial
   const visibleDeitySecrets = getLoreForSubject(currentDeity.id).filter(isLoreVisible);
   const visibleDeepArchives = CLASSIFIED_LORE.filter(isLoreVisible);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-md animate-fadeIn">
-      {/* Expanded Modal Window */}
-      <div className="relative max-w-7xl w-[96vw] h-[94vh] max-h-[94vh] bg-gradient-to-br from-[#12281a] via-[#09170e] to-[#030804] border-2 border-[#ffcc00] rounded-sm shadow-[0_0_60px_rgba(255,204,0,0.3)] flex flex-col overflow-hidden text-[#ffcc00]">
-        
-        {/* Sleek Top Cockpit Status Bar */}
-        <div className="flex items-center justify-between border-b border-[#ffcc00]/30 px-4 py-2.5 bg-black/60 shrink-0 gap-3">
-          {/* Left Title & System Badge */}
-          <div className="flex items-center gap-2.5 min-w-0">
-            <BookOpen className="w-5 h-5 text-[#ffcc00] shrink-0" />
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-totally-gothic tracking-wider text-[#ffcc00] truncate">
-                  The Nyne Archives
-                </h2>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#39ff14]/15 border border-[#39ff14]/40 text-[#39ff14] hidden md:inline">
-                  TERMINAL 5.5-NYNE
+  const content = (
+    <div className={`relative w-full h-full ${isEmbedded ? '' : 'max-w-7xl w-[96vw] h-[94vh] max-h-[94vh]'} nyneos-projected-screen nyneos-artdeco-circuits ${isEmbedded ? '' : 'border-2 border-[#d4af37] rounded-sm shadow-[0_0_60px_rgba(212,175,55,0.35)]'} flex flex-col overflow-hidden text-[#ffcc00]`}>
+      
+      {/* Sleek Top Art-Deco Circuit Cockpit Status Bar */}
+      <div className="relative flex items-center justify-between border-b border-[#d4af37]/40 px-4 py-2.5 bg-gradient-to-r from-[#070d19]/95 via-[#101c30]/95 to-[#070d19]/95 shrink-0 gap-3">
+        <img
+          src="/assets/konran/frames/terminal_chassis/span_circuit_dogleg.png"
+          alt=""
+          className="hidden lg:block absolute -bottom-[7px] left-1/2 -translate-x-1/2 w-64 h-3.5 object-contain pointer-events-none z-20 opacity-85"
+          draggable={false}
+        />
+        {/* Left Title & System Badge */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <BookOpen className="w-5 h-5 text-[#d4af37] shrink-0" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-totally-gothic tracking-wider text-[#ffcc00] truncate">
+                The Nyne Archives
+              </h2>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#d4af37]/15 border border-[#d4af37]/50 text-[#d4af37] hidden md:inline">
+                KONRA/NYNE OS • ART-DECO HOLOGRAPHIC PROJECTION (LYRICIA &amp; KRAYVUK)
+              </span>
+              {account.role !== 'player' && (
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-900/70 border border-purple-400 text-purple-300">
+                  ARCHIVIST (DM VIEW)
                 </span>
-                {account.role !== 'player' && (
-                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-900/70 border border-purple-400 text-purple-300">
-                    ARCHIVIST (DM VIEW)
-                  </span>
-                )}
-              </div>
+              )}
             </div>
           </div>
+        </div>
 
           {/* Compact Main Tab Navigator */}
           <div className="flex items-center gap-1 overflow-x-auto bg-black/40 p-1 rounded border border-[#ffcc00]/20 text-xs font-mono">
@@ -137,14 +142,59 @@ export const CodexModal: React.FC<CodexModalProps> = ({ isOpen, onClose, initial
                 playKeyClick();
                 setActiveTab('world');
               }}
-              className={`px-3 py-1.5 rounded-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-2.5 py-1.5 rounded-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === 'world'
                   ? 'bg-[#39ff14]/20 text-[#39ff14] font-bold border border-[#39ff14] shadow-[0_0_8px_rgba(57,255,20,0.4)]'
                   : 'text-[#ffcc00]/70 hover:text-[#ffcc00] hover:bg-[#ffcc00]/10'
               }`}
             >
               <Globe className="w-3.5 h-3.5 text-[#39ff14]" />
-              <span className="hidden sm:inline">World & Planes</span>
+              <span className="hidden sm:inline">World</span>
+            </button>
+
+            <button
+              onClick={() => {
+                playKeyClick();
+                setActiveTab('races');
+              }}
+              className={`px-2.5 py-1.5 rounded-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === 'races'
+                  ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.4)]'
+                  : 'text-[#ffcc00]/70 hover:text-[#ffcc00] hover:bg-[#ffcc00]/10'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Races</span>
+            </button>
+
+            <button
+              onClick={() => {
+                playKeyClick();
+                setActiveTab('classes');
+              }}
+              className={`px-2.5 py-1.5 rounded-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === 'classes'
+                  ? 'bg-purple-500/20 text-purple-300 font-bold border border-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.4)]'
+                  : 'text-[#ffcc00]/70 hover:text-[#ffcc00] hover:bg-[#ffcc00]/10'
+              }`}
+            >
+              <Shield className="w-3.5 h-3.5 text-purple-400" />
+              <span className="hidden sm:inline">Classes</span>
+            </button>
+
+            <button
+              onClick={() => {
+                playKeyClick();
+                setActiveTab('cities');
+              }}
+              className={`px-2.5 py-1.5 rounded-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === 'cities'
+                  ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.4)]'
+                  : 'text-[#ffcc00]/70 hover:text-[#ffcc00] hover:bg-[#ffcc00]/10'
+              }`}
+            >
+              <Compass className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">Cities</span>
             </button>
 
             <button
@@ -657,6 +707,48 @@ export const CodexModal: React.FC<CodexModalProps> = ({ isOpen, onClose, initial
         )}
 
         {/* ======================================================== */}
+        {/* TAB: RACES, CLASSES, OR CITIES GAZETTEER                 */}
+        {/* ======================================================== */}
+        {(activeTab === 'races' || activeTab === 'classes' || activeTab === 'cities') && (() => {
+          const sectionIndex = activeTab === 'races' ? 4 : activeTab === 'classes' ? 5 : 6;
+          const loreSection = KONRAN_WORLD_LORE[sectionIndex];
+          if (!loreSection) return null;
+          return (
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              <div className="border-b border-[#ffcc00]/20 pb-3">
+                <h3 className="text-xl sm:text-2xl font-totally-gothic text-[#ffcc00]">
+                  {loreSection.title}
+                </h3>
+                <p className="text-xs font-mono text-[#39ff14] uppercase mt-0.5">
+                  {loreSection.subtitle}
+                </p>
+              </div>
+
+              <p className="text-xs sm:text-sm text-[#ded7f0] font-sans leading-relaxed">
+                {loreSection.summary}
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {loreSection.bulletPoints?.map((bp, i) => (
+                  <div
+                    key={i}
+                    className="bg-black/40 border border-[#ffcc00]/30 p-4 rounded-sm space-y-1.5 hover:border-[#39ff14] transition-colors"
+                  >
+                    <h4 className="text-sm font-bold text-[#ffcc00] font-mono uppercase flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-[#39ff14]" />
+                      {bp.label}
+                    </h4>
+                    <p className="text-xs text-[#ded7f0]/90 leading-relaxed font-sans">
+                      {bp.text}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ======================================================== */}
         {/* TAB 3: HOLY CALENDAR & FESTIVALS */}
         {/* ======================================================== */}
         {activeTab === 'calendar' && (
@@ -793,6 +885,15 @@ export const CodexModal: React.FC<CodexModalProps> = ({ isOpen, onClose, initial
         </div>
 
       </div>
+  );
+
+  if (isEmbedded) {
+    return content;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-md animate-fadeIn">
+      {content}
     </div>
   );
 };

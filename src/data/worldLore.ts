@@ -192,5 +192,121 @@ export const KONRAN_WORLD_LORE: LoreSection[] = [
         text: "Devoted souls experience peace in the Providences of Konran, with the sovereign freedom to step back into the cosmic life current whenever they feel their journey is complete."
       }
     ]
+  },
+  {
+    id: "races-and-species",
+    title: "Races & Species of the Konra System",
+    subtitle: "Indigenous Bloodlines, Planar Stewards & Reborn Earth Survivors",
+    icon: "Users",
+    summary: "From the aquatic Cecaelia of Ousava and Victorian Elves of Lyricia to the mechanical Skree of Krayvuk and Earth Humans sheltered by Oray, every species reflects the divine essence of the Nine Planes.",
+    paragraphs: [
+      "Mortal life across Konran and its orbiting planetary realms is shaped both by native planar evolution and by the Soul Lottery—where heroic souls from fallen worlds are reborn into vessels attuned to The Nyne."
+    ],
+    bulletPoints: [
+      {
+        label: "Earth Humans (The Caldera Diaspora — Oray)",
+        text: "Survivors of the Fall of Earth's 18 cities, brought under Oray's draconic aegis. Versatile, ambitious, and deeply attuned to pyromancy, steam-forge engineering, and adaptive spellwork."
+      },
+      {
+        label: "Victorian & Golden Elves (Lyricia & Ousava)",
+        text: "Lyricia's Victorian Elves govern libraries, banks, and clockwork laboratories alongside Skryllion otters, while Ousava's Golden Elves steward the colossal Tree of Life in Sava Providence."
+      },
+      {
+        label: "Shadow Elves of the Veil (Slavyna)",
+        text: "Matriarchal operatives of Synthelavor and The Dark UnderCrust, commanding blood-silk alchemy, whispers, and the Spyder Systerhood's intelligence networks."
+      },
+      {
+        label: "Cecaelia & Elemental Kin (Ousava)",
+        text: "Octopus-bodied aquatic loremasters who cultivate sacred kelp for the Golden Scroll, alongside Phoenix-Salamander Fyends of the Fyre who raise living architecture."
+      },
+      {
+        label: "Kitsune & Beastfolk of the Maelstrom (Kayzoku)",
+        text: "Shapeshifting tricksters, swashbucklers, and high-roller navigators native to the moving Caravan Islands of the Kay Lands."
+      },
+      {
+        label: "The Skree & Cyrcut Forged (Krayvuk)",
+        text: "Biomechanical insectoid-construct hybrids and cybernetic chronomancers engineered in the liquid-metal basins of Kestox to calculate space and time."
+      },
+      {
+        label: "Void-Touched & Aberrant Exiles (Psyon)",
+        text: "Psionic savants, dream-walkers, and memory brokers dwelling across the non-Euclidean Patchwork Isles."
+      },
+      {
+        label: "Fae-Touched Gladiators & Artisans (Vyvain / Celeste)",
+        text: "Ever-changing champions of Leste Providence and the floating city of The Masquerade, blending martial perfection with theatrical splendor."
+      }
+    ]
+  },
+  {
+    id: "classes-and-callings",
+    title: "5.5e Classes, Magitech Subclasses & Callings",
+    subtitle: "CrystalPunk Artifice, Leyline Evocation & Liturgical Combat",
+    icon: "Shield",
+    summary: "Adventurers on Konran combine D&D 5.5e martial and arcane mastery with Vertazyum implants, K.A.M.P. house training, and Declared Sect invocations.",
+    paragraphs: [
+      "Whether educated in the four Houses of K.A.M.P. (Gryffon, Spynx, Hydra, Unycorn) or forged in the frontier Providences, classes on Konran channel planar ley currents and liturgical boons."
+    ],
+    bulletPoints: [
+      {
+        label: "Warmages, Evokers & Order of Scribes (Oray / House Hydra)",
+        text: "Masters of Caldera Pyromancy, high-precision spell-weaving, and resonant crystal arrays capable of shaping metal and leyfire."
+      },
+      {
+        label: "CrystalPunk Artificers & Tinkers (Lyricia / House Spynx)",
+        text: "Engineers who wire Vertazyum mana cells, optical Googgles, Kraykatzyte alloys, and ObsydianHeart Slablet peripherals."
+      },
+      {
+        label: "Clerics, Paladins & High Clergy of The Nyne",
+        text: "Ordained vessels of a Declared Deity. High-ranking clergy (Devotion Tiers 3–5) unlock encrypted Church communion channels, Sect skill modifiers, and Divine Favor (d12) miracles."
+      },
+      {
+        label: "Vanguard Fighters, Gladiators & Zyng! Captains (Vyvain / House Gryffon)",
+        text: "Tactical squad leaders, frontier beast-wardens, and arena athletes who command physical superiority dice and defensive formations."
+      },
+      {
+        label: "Soulknives, Masquerade Bards & Shadow Operatives (Slavyna & Kayzoku / House Unycorn)",
+        text: "Virtuoso performers, Primadonna aspirants, and covert infiltrators who weaponize acoustic cadence, sleight of hand, and social leverage."
+      },
+      {
+        label: "Chronomancers, Necro-Brokers & Fate Weavers (Krayvuk & Ay)",
+        text: "Manipulators of the 36-hour temporal cycle, Soul Lottery probability (Fate d4), and soul-ledger pacts."
+      }
+    ]
+  },
+  {
+    id: "cities-and-providences",
+    title: "Cities, Providences & Megastructures",
+    subtitle: "Gazetteer of Vantya, The Nine Providences & Orbital Hubs",
+    icon: "Compass",
+    summary: "A geographical and architectural registry of Konran's shifting capital, corporate enclaves, subterranean cities, and academic estates.",
+    paragraphs: [
+      "Travel across Konran moves by canal barge, sky-ship, snail-hotel caravan, and leyline portal—linking the nine divine Providences to the neutral crossroads of Vantya."
+    ],
+    bulletPoints: [
+      {
+        label: "Vantya — The Equatorial Crossroads",
+        text: "Divided into four directional trade ports linked by grand canals. Houses the Vantya Central Mint, ObsydianHeart's flagship Exchange Spire, and the Centennial Conclave Plaza."
+      },
+      {
+        label: "Thyrst River Basin — K.A.M.P. Main Estate",
+        text: "The fortified academic campus of the Konran Academy of Might & Proficiency, featuring the Great Tower Library, Gladiatorial Arena (GL-01), Vertazyum Labs, and the Offshore Lighthouse."
+      },
+      {
+        label: "The Floating City of The Masquerade",
+        text: "An airborne metropolis of amphitheaters, colosseums, and velvet salons that docks periodically at K.A.M.P. and Vantya for Open Auditions."
+      },
+      {
+        label: "Caldera Core & Steam Labs (Oray Providence)",
+        text: "Built into the rim of an active super-volcano, powering sky-forges, dragon roosts, and geothermal mana condensers."
+      },
+      {
+        label: "The Dark UnderCrust (Sub-Lithosphere)",
+        text: "Slavyna's counter-rotating subterranean metropolis suspended 40 leagues above the planetary mantle, cloaked from orbital scrying."
+      },
+      {
+        label: "Crafton & The Oryginator Sub-Forges (Lyvia / Kray Border)",
+        text: "Industrial magitech foundry cities where Lyricia's archivists and Krayvuk's machinists test experimental clockwork and rail conduits."
+      }
+    ]
   }
 ];

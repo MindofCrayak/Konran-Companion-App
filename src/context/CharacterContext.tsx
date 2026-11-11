@@ -251,6 +251,13 @@ interface CharacterContextType {
   resetDeityTrial: (characterId: string) => void;
   setPlayerNote: (characterId: string, key: string, content: string) => void;
   setReputationScore: (characterId: string, entityId: string, score: number) => void;
+  connectDiscordAccount: (discordProfile: {
+    discordId: string;
+    username: string;
+    avatarUrl?: string;
+    isDm?: boolean;
+  }) => void;
+  disconnectDiscordAccount: () => void;
 }
 
 const CharacterContext = createContext<CharacterContextType | undefined>(undefined);
@@ -299,19 +306,95 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, [account]);
 
+  // Check Discord OAuth callback query params or /api/auth/me on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const discordId = params.get('discord_id');
+    const discordUsername = params.get('discord_username');
+    const discordAvatar = params.get('discord_avatar');
+    const isDmParam = params.get('is_dm');
+
+    if (discordId && discordUsername) {
+      setAccount(prev => ({
+        ...prev,
+        id: `discord_${discordId}`,
+        displayName: discordUsername,
+        handle: `@${discordUsername}`,
+        discordId,
+        discordUsername,
+        discordAvatarUrl: discordAvatar || undefined,
+        role: isDmParam === 'true' ? 'archivist' : prev.role,
+      }));
+      // Clean URL params
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+
+    // Also poll /api/auth/me in case an Express session is active
+    fetch('/api/auth/me')
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => {
+        if (data && data.authenticated && data.user) {
+          setAccount(prev => ({
+            ...prev,
+            id: `discord_${data.user.discord_id}`,
+            displayName: data.user.username,
+            handle: `@${data.user.username}`,
+            discordId: data.user.discord_id,
+            discordUsername: data.user.username,
+            discordAvatarUrl: data.user.avatar_url || undefined,
+            role: data.user.is_dm ? 'archivist' : prev.role,
+          }));
+          if (Array.isArray(data.characters) && data.characters.length > 0) {
+            setCharacters(data.characters);
+          }
+        }
+      })
+      .catch(() => {
+        // Offline / frontend-only dev mode
+      });
+  }, []);
+
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_CHARACTERS, JSON.stringify(characters));
     } catch (e) {
       console.warn('Could not write characters to localStorage', e);
     }
-  }, [characters]);
+    // Sync character roster to backend if Discord is connected
+    if (account.discordId) {
+      fetch('/api/characters/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          discordId: account.discordId,
+          username: account.discordUsername || account.displayName,
+          avatarUrl: account.discordAvatarUrl,
+          characters,
+        }),
+      }).catch(() => {
+        // Ignore offline errors
+      });
+    }
+  }, [characters, account.discordId, account.discordUsername, account.displayName, account.discordAvatarUrl]);
 
   // Derived active character entity
   const activeCharacter = useMemo(() => {
     if (!account.activeCharacterId) return null;
     return characters.find(c => c.id === account.activeCharacterId) || null;
   }, [characters, account.activeCharacterId]);
+
+  // Apply Chromatic Cascade (data-patron attribute on :root and body)
+  useEffect(() => {
+    const patron = activeCharacter?.declaredDeity;
+    if (patron) {
+      document.documentElement.setAttribute('data-patron', patron);
+      document.body.setAttribute('data-patron', patron);
+    } else {
+      document.documentElement.removeAttribute('data-patron');
+      document.body.removeAttribute('data-patron');
+    }
+  }, [activeCharacter?.declaredDeity]);
 
   // Set designated active character
   const setActiveCharacterId = useCallback((id: string | null) => {
@@ -670,6 +753,35 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
   }, [account.role, activeCharacter]);
 
+  const connectDiscordAccount = useCallback((discordProfile: {
+    discordId: string;
+    username: string;
+    avatarUrl?: string;
+    isDm?: boolean;
+  }) => {
+    setAccount(prev => ({
+      ...prev,
+      id: `discord_${discordProfile.discordId}`,
+      displayName: discordProfile.username,
+      handle: `@${discordProfile.username}`,
+      discordId: discordProfile.discordId,
+      discordUsername: discordProfile.username,
+      discordAvatarUrl: discordProfile.avatarUrl,
+      role: discordProfile.isDm ? 'archivist' : prev.role,
+    }));
+  }, []);
+
+  const disconnectDiscordAccount = useCallback(() => {
+    setAccount(prev => ({
+      ...prev,
+      id: 'usr_konra_prime_01',
+      discordId: undefined,
+      discordUsername: undefined,
+      discordAvatarUrl: undefined,
+    }));
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+  }, []);
+
   const value = useMemo(() => ({
     account,
     characters,
@@ -687,6 +799,8 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     resetDeityTrial,
     setPlayerNote,
     setReputationScore,
+    connectDiscordAccount,
+    disconnectDiscordAccount,
   }), [
     account,
     characters,
@@ -704,6 +818,8 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     resetDeityTrial,
     setPlayerNote,
     setReputationScore,
+    connectDiscordAccount,
+    disconnectDiscordAccount,
   ]);
 
   return (
