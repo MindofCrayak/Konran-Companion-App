@@ -258,6 +258,7 @@ interface CharacterContextType {
     isDm?: boolean;
   }) => void;
   disconnectDiscordAccount: () => void;
+  syncToLedgerSheet: () => Promise<{ success: boolean; message?: string }>;
 }
 
 const CharacterContext = createContext<CharacterContextType | undefined>(undefined);
@@ -306,8 +307,38 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, [account]);
 
-  // Check Discord OAuth callback query params or /api/auth/me on mount
+  // Check Discord OAuth callback query params or /api/auth/me or #auth= fragment on mount
   useEffect(() => {
+    // 1. Support Cloudflare Pages #auth= base64 session fragment
+    if (typeof window !== 'undefined' && window.location.hash.startsWith('#auth=')) {
+      try {
+        const raw = window.location.hash.substring(6);
+        const decoded = atob(decodeURIComponent(raw));
+        const authData = JSON.parse(decoded);
+        if (authData && authData.id) {
+          const isDm = Array.isArray(authData.roles) && authData.roles.some((r: string) => 
+            r.toLowerCase().includes('dm') || 
+            r.toLowerCase().includes('gm') || 
+            r.toLowerCase().includes('master')
+          );
+          setAccount(prev => ({
+            ...prev,
+            id: `discord_${authData.id}`,
+            displayName: authData.global_name || authData.username,
+            handle: `@${authData.username}`,
+            discordId: authData.id,
+            discordUsername: authData.username,
+            discordAvatarUrl: authData.avatar ? `https://cdn.discordapp.com/avatars/${authData.id}/${authData.avatar}.png` : undefined,
+            role: isDm ? 'archivist' : prev.role,
+          }));
+          window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+          return;
+        }
+      } catch (err) {
+        console.error('Failed to parse Cloudflare Discord auth fragment:', err);
+      }
+    }
+
     const params = new URLSearchParams(window.location.search);
     const discordId = params.get('discord_id');
     const discordUsername = params.get('discord_username');
@@ -782,6 +813,29 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
   }, []);
 
+  const syncToLedgerSheet = useCallback(async () => {
+    try {
+      const payload = {
+        discord_id: account.discordId || account.handle || account.id,
+        username: account.discordUsername || account.displayName,
+        characters,
+        activeCharacter,
+        timestamp: new Date().toISOString()
+      };
+      const res = await fetch('/api/sync/sheet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        return { success: true, message: 'Synchronized with Cloud Ledger Sheet' };
+      }
+      return { success: false, message: `Sheet sync returned ${res.status}` };
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Sync failed' };
+    }
+  }, [account, characters, activeCharacter]);
+
   const value = useMemo(() => ({
     account,
     characters,
@@ -801,6 +855,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setReputationScore,
     connectDiscordAccount,
     disconnectDiscordAccount,
+    syncToLedgerSheet,
   }), [
     account,
     characters,
@@ -820,6 +875,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setReputationScore,
     connectDiscordAccount,
     disconnectDiscordAccount,
+    syncToLedgerSheet,
   ]);
 
   return (

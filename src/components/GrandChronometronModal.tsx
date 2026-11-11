@@ -58,35 +58,6 @@ const DAY_DATA = [
 ];
 
 export const GrandChronometronModal: React.FC<GrandChronometronModalProps> = ({ isOpen, onClose, isEmbedded = false }) => {
-];
-
-// The 9 Canonical Months (Short Codes & Glyphs)
-const MONTH_DATA = [
-  { code: 'OUS', name: 'Ousavyn', god: 'Ousava', icon: '🐚' },
-  { code: 'VER', name: 'Verdanya', god: 'Vevayun', icon: '🔱' },
-  { code: 'ETH', name: 'Etheris', god: 'Oray', icon: '👁️' },
-  { code: 'ANV', name: 'Anvylor', god: 'Lyricia', icon: '⚙️' },
-  { code: 'SOL', name: 'Solisvara', god: 'Slavyna', icon: '🗡️' },
-  { code: 'TEM', name: 'Tempestys', god: 'Psyon', icon: '⚡' },
-  { code: 'AEQ', name: 'Aequitas', god: 'Kayzoku', icon: '⛓️' },
-  { code: 'VEL', name: 'Velamyr', god: 'Ayan', icon: '🎭' },
-  { code: 'KRA', name: 'Kraytonis', god: 'Krayvuk', icon: '⌛' },
-];
-
-// The 9 Canonical Liturgical Days (Short Codes & Glyphs)
-const DAY_DATA = [
-  { code: 'PAC', name: 'Pacem', god: 'Vevayun', icon: '🔥' },
-  { code: 'FOR', name: 'Fortudo', god: 'Ousava', icon: '🪷' },
-  { code: 'SUT', name: 'Sutya', god: 'Oray', icon: '📖' },
-  { code: 'VET', name: 'Vetyta', god: 'Lyricia', icon: '📜' },
-  { code: 'JUV', name: 'Juvaus', god: 'Slavyna', icon: '🗝️' },
-  { code: 'AMZ', name: 'Amzytia', god: 'Krayvuk', icon: '☀️' },
-  { code: 'DYS', name: 'Dysci', god: 'Psyon', icon: '🔔' },
-  { code: 'LUD', name: 'Ludus', god: 'Kayzoku', icon: '🎲' },
-  { code: 'GRA', name: 'Gratytudo', god: 'Ayan', icon: '🪞' },
-];
-
-export const GrandChronometronModal: React.FC<GrandChronometronModalProps> = ({ isOpen, onClose }) => {
   const [simulatedSeconds, setSimulatedSeconds] = useState<number>(28800);
   const [speedMultiplier, setSpeedMultiplier] = useState<number>(1);
   const [isPaused, setIsPaused] = useState<boolean>(false);
@@ -129,41 +100,26 @@ export const GrandChronometronModal: React.FC<GrandChronometronModalProps> = ({ 
 
   if (!isOpen) return null;
 
-  return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/92 backdrop-blur-xl overflow-y-auto selection:bg-[#ffd700] selection:text-black"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Grand Chronometron Horologium"
-    >
-      {/* Gothic Horologium Cabinet Frame */}
-      <div className="relative w-full max-w-[540px] bg-gradient-to-b from-[#180e07] via-[#0f0703] to-[#080301] border-[4px] border-[#7d561a] rounded-[32px] shadow-[0_0_90px_rgba(0,0,0,0.98),0_0_30px_rgba(212,175,55,0.25)] p-3 sm:p-5 text-[#d4af37] font-serif select-none flex flex-col items-center">
-        
-        {/* Cathedral Roof Spire */}
-        <div className="absolute -top-7 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[24px] border-l-transparent border-r-[24px] border-r-transparent border-b-[24px] border-b-[#7d561a]" />
-        <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[18px] border-l-transparent border-r-[18px] border-r-transparent border-b-[18px] border-b-[#180e07]" />
+  const content = (
+    <div className={`relative w-full ${isEmbedded ? 'h-full overflow-y-auto' : 'max-w-[540px] border-[4px] border-[#7d561a] rounded-[32px] shadow-[0_0_90px_rgba(0,0,0,0.98),0_0_30px_rgba(212,175,55,0.25)]'} bg-gradient-to-b from-[#180e07] via-[#0f0703] to-[#080301] p-3 sm:p-5 text-[#d4af37] font-serif select-none flex flex-col items-center`}>
+      {/* Cathedral Roof Spire only in modal */}
+      {!isEmbedded && (
+        <>
+          <div className="absolute -top-7 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[24px] border-l-transparent border-r-[24px] border-r-transparent border-b-[24px] border-b-[#7d561a]" />
+          <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[18px] border-l-transparent border-r-[18px] border-r-transparent border-b-[18px] border-b-[#180e07]" />
+        </>
+      )}
 
-        {/* Top Header Bar */}
-        <div className="w-full flex justify-between items-center px-2 text-[10px] sm:text-[11px] tracking-[0.2em] text-[#a78b54] uppercase border-b border-[#5e3b1c]/60 pb-2">
-          <span>Horologium Astrarium // 36h Train</span>
-          <button
-            onClick={onClose}
-            className="p-1 rounded text-[#a78b54] hover:text-[#ffd700] hover:bg-white/5 transition-colors cursor-pointer"
-          >
-            <div className="flex items-center gap-0.5 text-[5.5px] font-mono uppercase tracking-wider text-[#38bdf8]">
-              <Waves className="w-1.5 h-1.5" />
-              <span>TIDE</span>
-            </div>
-            <div className="relative w-8 h-4 border-t-2 border-x-2 border-[#38bdf8]/40 rounded-t-full flex justify-center items-end">
-              <div 
-                className="absolute bottom-0 w-[1.5px] h-3 bg-[#38bdf8] origin-bottom transition-transform duration-700"
-                style={{ transform: `rotate(${(state.tidalCoefficient - 50) * 1.2}deg)` }}
-              />
-            </div>
-            <span className="text-[6px] font-mono font-bold text-[#ffd700] leading-none uppercase">
-              {state.tidalState}
-            </span>
-          </div>
+      {/* Top Header Bar */}
+      <div className="w-full flex justify-between items-center px-2 text-[10px] sm:text-[11px] tracking-[0.2em] text-[#a78b54] uppercase border-b border-[#5e3b1c]/60 pb-2">
+        <span>Horologium Astrarium // 36h Train</span>
+        <button
+          onClick={onClose}
+          className="p-1 rounded text-[#a78b54] hover:text-[#ffd700] hover:bg-white/5 transition-colors cursor-pointer"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
 
         {/* ============================================================== */}
         {/* THE MASTER HOROLOGIUM DIAL                                     */}
@@ -176,11 +132,11 @@ export const GrandChronometronModal: React.FC<GrandChronometronModalProps> = ({ 
         >
           {/* Base Chapter Ring Bezel */}
           <img 
-            src="/assests/clock-face-outer.png" 
+            src="/assets/clock-face-outer.png" 
             alt="Outer Bezel"
             className="absolute inset-0 w-full h-full object-contain pointer-events-none z-10 select-none opacity-85"
             onError={(e) => {
-              (e.currentTarget as HTMLImageElement).src = '/assests/clock-face.png';
+              (e.currentTarget as HTMLImageElement).src = '/assets/clock-face.png';
             }}
           />
 
@@ -430,7 +386,7 @@ export const GrandChronometronModal: React.FC<GrandChronometronModalProps> = ({ 
                 {/* Sun */}
                 <div className="absolute top-[8%] flex flex-col items-center">
                   <img 
-                    src="/assests/solar-disc.png" 
+                    src="/assets/solar-disc.png" 
                     alt="Sun" 
                     className="w-4 h-4 object-contain filter drop-shadow-[0_0_8px_#ffd700]"
                   />
@@ -475,7 +431,7 @@ export const GrandChronometronModal: React.FC<GrandChronometronModalProps> = ({ 
             }}
           >
             <img 
-              src="/assests/hand-hour.png" 
+              src="/assets/hand-hour.png" 
               alt="Hour Spade Hand"
               className="w-full h-full object-contain filter drop-shadow-[0_0_10px_rgba(0,0,0,0.95)] contrast-150 brightness-110 opacity-90"
             />
@@ -494,7 +450,7 @@ export const GrandChronometronModal: React.FC<GrandChronometronModalProps> = ({ 
             }}
           >
             <img 
-              src="/assests/hour-minute.png" 
+              src="/assets/hour-minute.png" 
               alt="Minute Lance"
               className="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(0,0,0,0.95)] contrast-150 brightness-110 opacity-90"
             />
@@ -513,7 +469,7 @@ export const GrandChronometronModal: React.FC<GrandChronometronModalProps> = ({ 
             }}
           >
             <img 
-              src="/assests/hand-second.png" 
+              src="/assets/hand-second.png" 
               alt="Ruby Second Needle"
               className="w-full h-full object-contain filter drop-shadow-[0_0_8px_#ff0000] contrast-125"
             />
@@ -592,9 +548,9 @@ export const GrandChronometronModal: React.FC<GrandChronometronModalProps> = ({ 
             <div className="p-2 rounded bg-[#0a0502] border border-[#5e3b1c]/80 font-mono text-[9px] text-left space-y-1">
               <div className="flex justify-between items-center text-[#ffd700] font-bold text-[10px]">
                 <span>Day {state.dayOfYear % 9 || 9}: {state.liturgicalDay.name}</span>
-                <span className="text-[#39ff14] text-[9px]">// {state.liturgicalDay.patron}</span>
+                <span className="text-[#39ff14] text-[9px]">// {state.liturgicalDay.god}</span>
               </div>
-              <p className="text-[#a78b54] text-[8px]">{state.liturgicalDay.domain} — {state.liturgicalDay.significance}</p>
+              <p className="text-[#a78b54] text-[8px]">{state.liturgicalDay.domain}</p>
             </div>
           )}
 

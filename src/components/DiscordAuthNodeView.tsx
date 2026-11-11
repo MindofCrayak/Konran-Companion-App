@@ -17,11 +17,28 @@ interface DiscordAuthNodeViewProps {
 }
 
 export const DiscordAuthNodeView: React.FC<DiscordAuthNodeViewProps> = () => {
-  const { account, characters, activeCharacter, connectDiscordAccount, disconnectDiscordAccount } = useCharacter();
+  const { account, characters, activeCharacter, connectDiscordAccount, disconnectDiscordAccount, syncToLedgerSheet } = useCharacter();
   const [discordHandleInput, setDiscordHandleInput] = useState(
     account.discordUsername || account.displayName || ''
   );
   const [isSavedNotice, setIsSavedNotice] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleManualSheetSync = async () => {
+    setIsSyncing(true);
+    setSyncStatus('TRANSMITTING TO LEDGER...');
+    playKeyClick();
+    const result = await syncToLedgerSheet();
+    setIsSyncing(false);
+    if (result.success) {
+      setSyncStatus('SYNCHRONIZED WITH GOOGLE SHEET LEDGER');
+      playDivineReveal();
+    } else {
+      setSyncStatus(`SYNC ERROR: ${result.message}`);
+    }
+    setTimeout(() => setSyncStatus(null), 4000);
+  };
 
   const handleLinkSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,7 +110,7 @@ export const DiscordAuthNodeView: React.FC<DiscordAuthNodeViewProps> = () => {
           </div>
 
           <a
-            href="/api/auth/discord"
+            href="/api/auth/discord/login"
             className="w-full py-2.5 px-3 bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold rounded flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(88,101,242,0.5)] transition-all cursor-pointer"
           >
             <ExternalLink className="w-4 h-4" />
@@ -142,6 +159,30 @@ export const DiscordAuthNodeView: React.FC<DiscordAuthNodeViewProps> = () => {
       {isSavedNotice && (
         <div className="p-2 bg-[#39ff14]/20 border border-[#39ff14] text-[#39ff14] text-center rounded animate-fadeIn">
           DISCORD HANDLE SYNCHRONIZED ACROSS LOCAL SLABLET MATRIX
+        </div>
+      )}
+
+      {/* Cloud Google Sheet Ledger Proxy Trigger */}
+      <div className="p-3 bg-black/60 rounded border border-[#ffd700]/30 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <ScrollText className="w-4 h-4 text-[#ffd700]" />
+          <div>
+            <div className="text-xs font-bold text-white tracking-wide">Cloudflare Pages &harr; Google Sheet Ledger</div>
+            <div className="text-[10px] text-white/60">Proxy: /api/sync/sheet &bull; Central Campaign Ledger</div>
+          </div>
+        </div>
+        <button
+          onClick={handleManualSheetSync}
+          disabled={isSyncing}
+          className="px-3 py-1.5 bg-[#ffd700]/20 hover:bg-[#ffd700]/30 border border-[#ffd700] text-[#ffd700] text-xs font-bold rounded flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
+        >
+          {isSyncing ? 'TRANSMITTING...' : 'SYNC LEDGER NOW'}
+        </button>
+      </div>
+
+      {syncStatus && (
+        <div className="p-2 bg-[#ffd700]/20 border border-[#ffd700] text-[#ffd700] text-center text-xs rounded font-mono animate-fadeIn">
+          {syncStatus}
         </div>
       )}
 
