@@ -303,6 +303,7 @@ export type TerminalWindowType =
   | 'party' 
   | 'notes' 
   | 'world-lore'
+  | 'lore-atlas'
   | 'economy'
   | 'discord'
   | 'allegiance'

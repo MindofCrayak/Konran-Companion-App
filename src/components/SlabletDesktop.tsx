@@ -22,7 +22,7 @@ import {
   Coins
 } from 'lucide-react';
 import { useCharacter } from '../context/CharacterContext';
-import { playKeyClick } from '../utils/audio';
+import { playKeyClick, playOptionSelect } from '../utils/audio';
 import { getKonranGrandState } from '../utils/celestial';
 import { KonranGlobe } from './KonranGlobe';
 import { GrandChronometronModal } from './GrandChronometronModal';
@@ -39,6 +39,7 @@ import { FatedCharacterBadge } from './FatedCharacterBadge';
 import { PartyVaultModal } from './PartyVaultModal';
 import { CoinPurseEconomyView } from './CoinPurseEconomyView';
 import { LivingLoreEngineView } from './LivingLoreEngineView';
+import { LoreAtlasModal } from './LoreAtlasModal';
 import { DiscordAuthNodeView } from './DiscordAuthNodeView';
 import { AllegianceNodeView } from './AllegianceNodeView';
 import { CharacterCreatorNodeView } from './CharacterCreatorNodeView';
@@ -56,6 +57,44 @@ interface SlabletDesktopProps {
   onOpenKAMPSortingModal?: () => void;
   onOpenFatedQuestionnaireModal?: () => void;
 }
+
+const STORAGE_KEY = 'konran_slablet_windows_v4';
+
+const DEFAULT_WINDOWS: CanvasWindowState[] = [
+  {
+    id: 'node-badge',
+    title: 'Fated Covenant & Badge',
+    type: 'badge',
+    isOpen: true,
+    isMinimized: false,
+    isMaximized: false,
+    position: { x: 24, y: 72 },
+    size: { width: 440, height: 520 },
+    zIndex: 10,
+    customData: { accentColor: '#ffcc00' }
+  },
+  {
+    id: 'node-custom-1',
+    title: 'Field Terminal // Konran Link',
+    type: 'custom',
+    isOpen: true,
+    isMinimized: false,
+    isMaximized: false,
+    position: { x: 740, y: 72 },
+    size: { width: 440, height: 420 },
+    zIndex: 11,
+    customData: {
+      accentColor: '#39ff14',
+      terminalName: 'Primary Crystal Terminal',
+      commandLog: [
+        'KONRA/NYNE OS // SPATIAL MATRIX SYNCHRONIZED',
+        'CENTRAL PLANETARY ARRAY: KONRAN ENGAGED',
+        'CLICK GLOBE OR EMPTY CANVAS TO SPAWN ADDITIONAL NODES',
+      ],
+      notesText: 'Exploration Log: Leyline resonance pulsing along the equator. Moons Olysphere and Ayanath confirmed in harmonic counter-orbit.',
+    }
+  }
+];
 
 export const SlabletDesktop = ({
   onOpenCodex,
@@ -124,8 +163,159 @@ export const SlabletDesktop = ({
     }, 2800);
   };
 
+  // Bring window to front
+  const focusWindow = useCallback((id: string) => {
+    nextZIndex.current += 1;
+    const topZ = nextZIndex.current;
+    setWindows(prev => prev.map(w => w.id === id ? { ...w, zIndex: topZ } : w));
+  }, []);
+
+  // Update window position
+  const updateWindowPosition = useCallback((id: string, pos: { x: number; y: number }) => {
+    setWindows(prev => prev.map(w => w.id === id ? { ...w, position: pos } : w));
+  }, []);
+
+  // Update window size
+  const updateWindowSize = useCallback((id: string, size: { width: number; height: number }) => {
+    setWindows(prev => prev.map(w => w.id === id ? { ...w, size } : w));
+  }, []);
+
+  // Toggle minimize
+  const toggleMinimizeWindow = useCallback((id: string) => {
+    setWindows(prev => prev.map(w => w.id === id ? { ...w, isMinimized: !w.isMinimized } : w));
+  }, []);
+
+  // Toggle maximize
+  const toggleMaximizeWindow = useCallback((id: string) => {
+    setWindows(prev => prev.map(w => w.id === id ? { ...w, isMaximized: !w.isMaximized } : w));
+  }, []);
+
+  // Close window
+  const closeWindow = useCallback((id: string) => {
+    setWindows(prev => prev.map(w => w.id === id ? { ...w, isOpen: false } : w));
+  }, []);
+
+  // Update window custom attributes
+  const updateWindowData = useCallback((id: string, updated: Partial<CanvasWindowState>) => {
+    setWindows(prev => prev.map(w => w.id === id ? { ...w, ...updated } : w));
+  }, []);
+
+  // Open / Launch a window type
+  const launchWindow = useCallback((type: TerminalWindowType, title: string, customColor?: string) => {
+    playOptionSelect();
+    setRadialMenuPos(null);
+    nextZIndex.current += 1;
+
+    setWindows(prev => {
+      let width = 420;
+      let height = 450;
+      if (type === 'codex') { width = 640; height = 550; }
+      else if (type === 'kamp' || type === 'kamp-quiz') { width = Math.min(1140, Math.max(360, window.innerWidth - 32)); height = Math.min(780, Math.max(420, window.innerHeight - 100)); }
+      else if (type === 'fated-questionnaire') { width = Math.min(920, Math.max(360, window.innerWidth - 40)); height = Math.min(720, Math.max(420, window.innerHeight - 110)); }
+      else if (type === 'character-sheet') { width = Math.min(820, Math.max(360, window.innerWidth - 40)); height = Math.min(680, Math.max(400, window.innerHeight - 120)); }
+      else if (type === 'chronometron') { width = 450; height = 620; }
+      else if (type === 'reputation') { width = 560; height = 520; }
+      else if (type === 'economy') { width = Math.min(780, Math.max(360, window.innerWidth - 40)); height = Math.min(640, Math.max(400, window.innerHeight - 120)); }
+      else if (type === 'world-lore') { width = Math.min(880, Math.max(360, window.innerWidth - 40)); height = Math.min(700, Math.max(400, window.innerHeight - 110)); }
+      else if (type === 'lore-atlas') { width = Math.min(960, Math.max(360, window.innerWidth - 40)); height = Math.min(760, Math.max(420, window.innerHeight - 110)); }
+      else if (type === 'discord') { width = Math.min(640, Math.max(360, window.innerWidth - 40)); height = Math.min(540, Math.max(380, window.innerHeight - 120)); }
+      else if (type === 'allegiance') { width = Math.min(880, Math.max(360, window.innerWidth - 40)); height = Math.min(680, Math.max(400, window.innerHeight - 120)); }
+      else if (type === 'character-creator') { width = Math.min(680, Math.max(360, window.innerWidth - 40)); height = Math.min(680, Math.max(400, window.innerHeight - 120)); }
+      else if (type === 'party') { width = 520; height = 460; }
+      else if (type === 'custom') { width = 440; height = 380; }
+
+      const existing = prev.find(w => w.type === type && (type !== 'custom' || w.title === title));
+      if (existing) {
+        const centeredX = type === 'kamp' || type === 'kamp-quiz' || type === 'fated-questionnaire'
+          ? Math.max(12, Math.round((window.innerWidth - width) / 2))
+          : Math.min(Math.max(12, existing.position.x), Math.max(12, window.innerWidth - width - 20));
+        const centeredY = type === 'kamp' || type === 'kamp-quiz' || type === 'fated-questionnaire'
+          ? Math.max(60, Math.round((window.innerHeight - height) / 2))
+          : Math.min(Math.max(60, existing.position.y), Math.max(60, window.innerHeight - 120));
+
+        return prev.map(w => w.id === existing.id ? {
+          ...w,
+          isOpen: true,
+          isMinimized: false,
+          position: { x: centeredX, y: centeredY },
+          size: { width, height },
+          zIndex: nextZIndex.current
+        } : w);
+      }
+
+      // Calculate staggered or centered offset
+      const count = prev.filter(w => w.isOpen).length;
+      const offsetX = type === 'kamp' || type === 'kamp-quiz' || type === 'fated-questionnaire'
+        ? Math.max(12, Math.round((window.innerWidth - width) / 2))
+        : 50 + (count % 5) * 35;
+      const offsetY = type === 'kamp' || type === 'kamp-quiz' || type === 'fated-questionnaire'
+        ? Math.max(60, Math.round((window.innerHeight - height) / 2))
+        : 80 + (count % 4) * 30;
+
+      const newWin: CanvasWindowState = {
+        id: `node-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        title,
+        type,
+        isOpen: true,
+        isMinimized: false,
+        isMaximized: false,
+        position: { x: Math.min(Math.max(12, window.innerWidth - width - 16), Math.max(12, offsetX)), y: Math.max(60, offsetY) },
+        size: { width, height },
+        zIndex: nextZIndex.current,
+        customData: {
+          accentColor: customColor || (type === 'codex' ? '#00e5a3' : type === 'chronometron' ? '#ffd700' : type === 'kamp' || type === 'kamp-quiz' ? '#8b1e1e' : type === 'fated-questionnaire' ? '#ffcc00' : type === 'exchange' ? '#c49cff' : type === 'economy' ? '#ffd700' : type === 'world-lore' ? '#39ff14' : type === 'discord' ? '#5865F2' : type === 'allegiance' ? '#ffd700' : type === 'character-creator' ? '#39ff14' : '#39ff14'),
+          terminalName: title,
+        }
+      };
+
+      return [...prev, newWin];
+    });
+
+    showSystemNotice(`TERMINAL NODE ATTACHED // ${title.toUpperCase()}`);
+  }, []);
+
+  // Arrange / Cascade windows
+  const cascadeWindows = () => {
+    playKeyClick();
+    setWindows(prev => prev.map((w, index) => ({
+      ...w,
+      isOpen: true,
+      isMinimized: false,
+      isMaximized: false,
+      position: { x: 30 + (index * 36), y: 75 + (index * 32) },
+      zIndex: 10 + index,
+    })));
+    showSystemNotice('NODES ARRANGED // DIAGONAL CASCADE APPLIED');
+  };
+
+  // Reset to default configuration
+  const resetWindows = () => {
+    playKeyClick();
+    setWindows(DEFAULT_WINDOWS);
+    showSystemNotice('DESKTOP RECONFIGURED // DEFAULT NODES RESTORED');
+  };
+
+  // Handle Canvas Blank Space click (not on interactive elements)
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    // If click originated from a window or button, don't open radial menu
+    if ((e.target as HTMLElement).closest('.floating-terminal-node, button, input, textarea, a')) {
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.min(rect.width - 240, Math.max(20, e.clientX));
+    const y = Math.min(rect.height - 280, Math.max(70, e.clientY));
+    setRadialMenuPos({ x, y });
+    playKeyClick();
+  };
+
   const celestialState = getKonranGrandState(now);
   const { hourAngle, minuteAngle, secondAngle, isNightwatch, timeString, liturgicalDay } = celestialState;
+
+  // Active open windows count
+  const openWindows = windows.filter(w => w.isOpen);
+  const activePatronPalette = activeCharacter?.declaredDeity
+    ? LITURGICAL_PALETTES[activeCharacter.declaredDeity]
+    : LITURGICAL_PALETTES.Oray;
 
   return (
     <main 
@@ -167,7 +357,7 @@ export const SlabletDesktop = ({
       <div className="slablet-vignette" aria-hidden="true" />
       <div className="slablet-crt" aria-hidden="true" />
 
-      {/* 1. TOP HUD HEADER */}
+      {/* 1. TOP HUD HEADER RIBBON */}
       <header className="slablet-hud">
         <div className="slablet-brand">
           <span className="slablet-status-light" />
@@ -338,23 +528,6 @@ export const SlabletDesktop = ({
         </div>
       </header>
 
-      {/* 2. MAIN ORBIT STAGE (Globe + 4 Surrounding Modules) */}
-      <section className="slablet-orbit-stage" aria-label="Konran planetary desktop">
-        <div className="slablet-orbit slablet-orbit--outer" aria-hidden="true" />
-        <div className="slablet-orbit slablet-orbit--inner" aria-hidden="true" />
-        
-        <div className="slablet-globe-frame">
-          <div className="slablet-globe-label">
-            <span className="slablet-status-light" />
-            KONRAN // LIVE ORBIT
-          </div>
-          <KonranGlobe />
-          <div className="slablet-moon-labels" aria-label="Orbiting moons">
-            <span><i className="moon-dot moon-dot--amber" /> OLYSPHERE</span>
-            <span><i className="moon-dot moon-dot--violet" /> AYANATH</span>
-          </div>
-        </div>
-
       {/* 2. MAIN CENTER STAGE WITH CENTRAL PLANET KONRAN */}
       <section 
         className="slablet-orbit-stage flex-1 relative flex items-center justify-center" 
@@ -521,6 +694,12 @@ export const SlabletDesktop = ({
               <LivingLoreEngineView />
             )}
 
+            {win.type === 'lore-atlas' && (
+              <div className="w-full h-full p-2 bg-[#0c0804] overflow-y-auto">
+                <LoreAtlasModal isOpen={true} onClose={() => closeWindow(win.id)} isEmbedded={true} />
+              </div>
+            )}
+
             {win.type === 'discord' && (
               <DiscordAuthNodeView onClose={() => closeWindow(win.id)} />
             )}
@@ -627,6 +806,17 @@ export const SlabletDesktop = ({
                   <span>World Map, Eras &amp; Rumors</span>
                 </div>
                 <span className="text-[9px] text-[#39ff14]">+LORE</span>
+              </button>
+
+              <button
+                onClick={() => launchWindow('lore-atlas', 'Grand Codex & Atlas // LegendKeeper Live', '#ffd700')}
+                className="w-full text-left p-2 rounded bg-white/5 hover:bg-[#ffd700]/15 border border-transparent hover:border-[#ffd700] flex items-center justify-between cursor-pointer transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-3.5 h-3.5 text-[#ffd700]" />
+                  <span>LegendKeeper Lore &amp; Atlas</span>
+                </div>
+                <span className="text-[9px] text-[#ffd700]">+LIVE-LK</span>
               </button>
 
               <button
@@ -754,13 +944,7 @@ export const SlabletDesktop = ({
         {notice && <div className="slablet-notice" role="status">{notice}</div>}
       </section>
 
-      {/* FULL CHRONOMETRON MODAL */}
-      <GrandChronometronModal 
-        isOpen={showChronometron} 
-        onClose={() => setShowChronometron(false)} 
-      />
-
-      {/* 3. FOOTER */}
+      {/* 3. BOTTOM MENU RIBBON FOOTER */}
       <footer className="slablet-footer">
         <div className="slablet-coordinates">
           <Compass aria-hidden="true" />
@@ -853,6 +1037,18 @@ export const SlabletDesktop = ({
             className="slablet-ledger-button" 
             onClick={(e) => {
               e.stopPropagation();
+              launchWindow('lore-atlas', 'Grand Codex & Atlas // LegendKeeper Live', '#ffd700');
+            }}
+          >
+            <Compass aria-hidden="true" />
+            <span>LK Atlas</span>
+            <ArrowUpRight aria-hidden="true" />
+          </button>
+
+          <button 
+            className="slablet-ledger-button" 
+            onClick={(e) => {
+              e.stopPropagation();
               launchWindow('custom', 'Field Terminal', '#39ff14');
             }}
           >
@@ -862,7 +1058,6 @@ export const SlabletDesktop = ({
         </div>
       </footer>
       <div className="slablet-signal"><Radio aria-hidden="true" /> MAGITECH SIGNAL STABLE</div>
-      </section>
     </main>
   );
 };
