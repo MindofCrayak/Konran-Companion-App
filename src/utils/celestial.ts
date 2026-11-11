@@ -344,7 +344,7 @@ export function getKonranGrandState(input?: number | Date): KonranGrandState {
 
     return {
       phaseName,
-      phaseSprite: `/assets/${prefix}_${spriteSuffix}.png`,
+      phaseSprite: `/assests/${prefix}_${spriteSuffix}.png`,
       phaseIndex,
       isWaxing
     };
