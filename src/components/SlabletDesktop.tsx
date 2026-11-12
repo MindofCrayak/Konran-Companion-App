@@ -19,7 +19,8 @@ import {
   Users,
   Terminal,
   RotateCcw,
-  Coins
+  Coins,
+  Download
 } from 'lucide-react';
 import { useCharacter } from '../context/CharacterContext';
 import { playKeyClick, playOptionSelect } from '../utils/audio';
@@ -40,6 +41,8 @@ import { PartyVaultModal } from './PartyVaultModal';
 import { CoinPurseEconomyView } from './CoinPurseEconomyView';
 import { LivingLoreEngineView } from './LivingLoreEngineView';
 import { LoreAtlasModal } from './LoreAtlasModal';
+import { ExportCharacterModal } from './ExportCharacterModal';
+import { CharacterExportPayload } from '../types/feExport';
 import { DiscordAuthNodeView } from './DiscordAuthNodeView';
 import { AllegianceNodeView } from './AllegianceNodeView';
 import { CharacterCreatorNodeView } from './CharacterCreatorNodeView';
@@ -222,6 +225,7 @@ export const SlabletDesktop = ({
       else if (type === 'allegiance') { width = Math.min(880, Math.max(360, window.innerWidth - 40)); height = Math.min(680, Math.max(400, window.innerHeight - 120)); }
       else if (type === 'character-creator') { width = Math.min(680, Math.max(360, window.innerWidth - 40)); height = Math.min(680, Math.max(400, window.innerHeight - 120)); }
       else if (type === 'party') { width = 520; height = 460; }
+      else if (type === 'export-5e') { width = 480; height = 520; }
       else if (type === 'custom') { width = 440; height = 380; }
 
       const existing = prev.find(w => w.type === type && (type !== 'custom' || w.title === title));
@@ -700,6 +704,61 @@ export const SlabletDesktop = ({
               </div>
             )}
 
+            {win.type === 'export-5e' && (
+              <div className="w-full h-full p-2 bg-[#110a05] overflow-y-auto">
+                <ExportCharacterModal
+                  isOpen={true}
+                  onClose={() => closeWindow(win.id)}
+                  isEmbedded={true}
+                  character={{
+                    name: activeCharacter?.name || 'Fated Operative',
+                    raceName: activeCharacter?.species || 'Konran Native',
+                    raceFeaturesText: activeCharacter?.lifepath?.specialAbilities || activeCharacter?.species || 'Native to the planes of Konran',
+                    backgroundName: activeCharacter?.kampProfile?.houseName ? `K.A.M.P. ${activeCharacter.kampProfile.houseName} Alumnus` : 'Fated Wanderer',
+                    backgroundFeaturesText: activeCharacter?.kampProfile?.houseBoon?.description || activeCharacter?.lifepath?.greatDeed || 'Walks the leyline paths of Konran',
+                    classes: [
+                      {
+                        name: activeCharacter?.characterClass || 'Adventurer',
+                        level: activeCharacter?.level || 1,
+                        hitDie: 8,
+                        featuresText: activeCharacter?.deityBoon ? `${activeCharacter.deityBoon.name}: ${activeCharacter.deityBoon.description} (${activeCharacter.deityBoon.dndMechanic})` : 'Devotee of the Nyne',
+                      }
+                    ],
+                    stats: {
+                      str: activeCharacter?.stats?.str || 10,
+                      dex: activeCharacter?.stats?.dex || 10,
+                      con: activeCharacter?.stats?.con || 10,
+                      int: activeCharacter?.stats?.int || 10,
+                      wis: activeCharacter?.stats?.wis || 10,
+                      cha: activeCharacter?.stats?.cha || 10,
+                    },
+                    savingThrowProficiencies: {
+                      str: false,
+                      dex: false,
+                      con: false,
+                      int: false,
+                      wis: false,
+                      cha: false,
+                    },
+                    hp: {
+                      current: activeCharacter?.stats?.hpCurrent || 10,
+                      max: activeCharacter?.stats?.hpMax || 10,
+                      temp: activeCharacter?.stats?.tempHp || 0,
+                    },
+                    speed: activeCharacter?.stats?.speed || 30,
+                    armorClass: activeCharacter?.stats?.ac || 10,
+                    proficiencies: {
+                      armor: 'Light Armor, Medium Armor, Shields',
+                      weapons: 'Simple Weapons, Martial Weapons',
+                      tools: "Thieves' Tools, Magitech Focus",
+                      languages: 'Common, Celestial, Primordial',
+                    },
+                    inventory: (activeCharacter?.inventory || []).map(i => `${i.name} (x${i.quantity}) - ${i.category}: ${i.description || ''}`),
+                  }}
+                />
+              </div>
+            )}
+
             {win.type === 'discord' && (
               <DiscordAuthNodeView onClose={() => closeWindow(win.id)} />
             )}
@@ -784,6 +843,17 @@ export const SlabletDesktop = ({
                   <span>5.5e Sheet &amp; Clergy Comms</span>
                 </div>
                 <span className="text-[9px] text-[#39ff14]">+OH-OS</span>
+              </button>
+
+              <button
+                onClick={() => launchWindow('export-5e', 'Export to 5e App (Walter Kammerer)', '#ffd700')}
+                className="w-full text-left p-2 rounded bg-white/5 hover:bg-[#ffd700]/15 border border-transparent hover:border-[#ffd700] flex items-center justify-between cursor-pointer transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Download className="w-3.5 h-3.5 text-[#ffd700]" />
+                  <span>Export 5e Character File</span>
+                </div>
+                <span className="text-[9px] text-[#ffd700]">+EXPORT</span>
               </button>
 
               <button

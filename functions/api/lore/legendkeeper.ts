@@ -1,64 +1,101 @@
 interface Env {
-  LEGENDKEEPER_PROJECT_ID: string;
   LEGENDKEEPER_API_KEY: string;
+  LEGENDKEEPER_PROJECT_ID?: string;
 }
 
-// GET: /api/lore/legendkeeper
-// Query params:
-//   - q: search term (full text search)
-//   - resource_id: fetch specific resource metadata & docs
-//   - doc_id: fetch specific document blocks (when paired with resource_id)
-//   - list: set to 'true' to get top-level resources
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const { LEGENDKEEPER_PROJECT_ID, LEGENDKEEPER_API_KEY } = context.env;
+  const { LEGENDKEEPER_API_KEY, LEGENDKEEPER_PROJECT_ID } = context.env;
 
-  if (!LEGENDKEEPER_PROJECT_ID || !LEGENDKEEPER_API_KEY) {
+  if (!LEGENDKEEPER_API_KEY) {
     return new Response(
-      JSON.stringify({ error: "Missing LegendKeeper credentials in environment" }),
+      JSON.stringify({ error: "LEGENDKEEPER_API_KEY is not set in Cloudflare secrets." }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 
-  const url = new URL(context.request.url);
-  const q = url.searchParams.get("q");
-  const resourceId = url.searchParams.get("resource_id");
-  const docId = url.searchParams.get("doc_id");
-  const list = url.searchParams.get("list");
-
-  const baseUrl = "https://www.legendkeeper.com/api/v3/projects/" + LEGENDKEEPER_PROJECT_ID;
   const headers = {
-    Authorization: `Bearer ${LEGENDKEEPER_API_KEY}`,
+    Authorization: `Bearer ${LEGENDKEEPER_API_KEY.trim()}`,
     Accept: "application/json",
   };
 
   try {
-    let targetUrl = "";
+    // 1. Automatically resolve Project ID if not supplied or mismatched
+    let projectId = LEGENDKEEPER_PROJECT_ID?.trim();
+    if (!projectId) {
+      const projRes = await fetch("https://www.legendkeeper.com/api/v3/projects", { headers });
+      if (!projRes.ok) {
+        const errText = await projRes.text();
+        return new Response(
+          JSON.stringify({ error: `LegendKeeper project lookup failed (${projRes.status}): ${errText}` }),
+          { status: projRes.status, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      const projData: any = await projRes.json();
+      projectId = projData.data?.[0]?.id;
+      if (!projectId) {
+        return new Response(
+          JSON.stringify({ error: "No projects found associated with this API key." }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    const url = new URL(context.request.url);
+    const q = url.searchParams.get("q");
+    const resourceId = url.searchParams.get("resource_id");
+    const docId = url.searchParams.get("doc_id");
+
+    const baseUrl = `https://www.legendkeeper.com/api/v3/projects/${projectId}`;
+    let targetUrl = `${baseUrl}/resources?limit=50`;
 
     if (q) {
-      // 1. Full-text search
-      targetUrl = `${baseUrl}/search?q=${encodeURIComponent(q)}&limit=10`;
+      targetUrl = `${baseUrl}/search?q=${encodeURIComponent(q)}&limit=25`;
     } else if (resourceId && docId) {
-      // 2. Fetch specific document content blocks
       targetUrl = `${baseUrl}/resources/${encodeURIComponent(resourceId)}/docs/${encodeURIComponent(docId)}/blocks`;
     } else if (resourceId) {
-      // 3. Fetch specific resource details
       targetUrl = `${baseUrl}/resources/${encodeURIComponent(resourceId)}`;
-    } else if (list === "true") {
-      // 4. List top-level resources
-      targetUrl = `${baseUrl}/resources?limit=50&parentId=root`;
-    } else {
-      // Default: Project Overview
-      targetUrl = baseUrl;
     }
 
     const response = await fetch(targetUrl, { headers });
-    const data = await response.text();
+    const rawText = await response.text();
 
-    return new Response(data, {
-      status: response.status,
+    if (!response.ok) {
+      return new Response(
+        JSON.stringify({
+          error: `LegendKeeper API returned status ${response.status}`,
+          details: rawText,
+          targetUrl,
+        }),
+        { status: response.status, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    let parsed = JSON.parse(rawText);
+
+    // If search had 0 results, fall back to listing matching resources by name
+    if (q && Array.isArray(parsed.data) && parsed.data.length === 0) {
+      const listRes = await fetch(`${baseUrl}/resources?limit=100`, { headers });
+      if (listRes.ok) {
+        const listData: any = await listRes.json();
+        const lowerQ = q.toLowerCase();
+        const matches = (listData.data || []).filter((r: any) =>
+          r.name?.toLowerCase().includes(lowerQ) ||
+          r.tags?.some((t: string) => t.toLowerCase().includes(lowerQ))
+        );
+        parsed = {
+          data: matches.map((r: any) => ({
+            resource: r,
+            document: r.documents?.[0] ? { id: r.documents[0].id, name: r.documents[0].name } : undefined,
+          })),
+        };
+      }
+    }
+
+    return new Response(JSON.stringify(parsed), {
+      status: 200,
       headers: {
         "Content-Type": "application/json",
-        "Cache-Control": "public, max-age=60", // Cache responses for 1 minute
+        "Cache-Control": "public, max-age=60",
       },
     });
   } catch (err: any) {

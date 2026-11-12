@@ -308,6 +308,7 @@ export type TerminalWindowType =
   | 'discord'
   | 'allegiance'
   | 'character-creator'
+  | 'export-5e'
   | 'custom';
 
 export interface CanvasWindowState {

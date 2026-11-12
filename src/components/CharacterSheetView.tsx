@@ -12,11 +12,14 @@ import {
   Coins,
   Radio,
   Cpu,
+  Download,
 } from 'lucide-react';
 import { useCharacter } from '../context/CharacterContext';
 import { InventoryItem, CharacterSheetStats } from '../types';
 import { DEITIES } from '../data/deities';
 import { playKeyClick, playOptionSelect, playDivineReveal } from '../utils/audio';
+import { ExportCharacterModal } from './ExportCharacterModal';
+import { CharacterExportPayload } from '../types/feExport';
 
 const DEFAULT_STATS: CharacterSheetStats = {
   str: 10,
@@ -192,6 +195,7 @@ function getClergyMessagesForDeity(deityId?: string): ClergyMessage[] {
 export const CharacterSheetView: React.FC = () => {
   const { activeCharacter, account, updateCharacter, setPlayerNote } = useCharacter();
   const [activeTab, setActiveTab] = useState<'sheet' | 'inventory' | 'clergy' | 'notes'>('sheet');
+  const [showExportModal, setShowExportModal] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemCategory, setNewItemCategory] = useState<InventoryItem['category']>('Magitech');
   const [newItemQty, setNewItemQty] = useState(1);
@@ -338,6 +342,18 @@ export const CharacterSheetView: React.FC = () => {
           >
             <ScrollText className="w-3.5 h-3.5" />
             <span>Field Journal</span>
+          </button>
+
+          <button
+            onClick={() => {
+              playOptionSelect();
+              setShowExportModal(true);
+            }}
+            className="px-2.5 py-1 rounded bg-[#ffd700]/15 hover:bg-[#ffd700]/25 text-[#ffd700] border border-[#ffd700]/60 flex items-center gap-1.5 font-mono text-[11px] font-bold shadow-[0_0_10px_rgba(255,215,0,0.2)] cursor-pointer transition-all ml-1"
+            title="Export character for mobile Fifth Edition Character Sheet (Walter Kammerer)"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export 5e JSON</span>
           </button>
         </div>
       </div>
@@ -714,6 +730,58 @@ export const CharacterSheetView: React.FC = () => {
           </div>
         )}
       </div>
+
+      {showExportModal && (
+        <ExportCharacterModal
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          character={{
+            name: activeCharacter.name || 'Fated Operative',
+            raceName: activeCharacter.species || 'Konran Native',
+            raceFeaturesText: activeCharacter.lifepath?.specialAbilities || activeCharacter.species || 'Native to the planes of Konran',
+            backgroundName: activeCharacter.kampProfile?.houseName ? `K.A.M.P. ${activeCharacter.kampProfile.houseName} Alumnus` : 'Fated Wanderer',
+            backgroundFeaturesText: activeCharacter.kampProfile?.houseBoon?.description || activeCharacter.lifepath?.greatDeed || 'Walks the leyline paths of Konran',
+            classes: [
+              {
+                name: activeCharacter.characterClass || 'Adventurer',
+                level: activeCharacter.level || 1,
+                hitDie: 8,
+                featuresText: activeCharacter.deityBoon ? `${activeCharacter.deityBoon.name}: ${activeCharacter.deityBoon.description} (${activeCharacter.deityBoon.dndMechanic})` : 'Devotee of the Nyne',
+              }
+            ],
+            stats: {
+              str: stats.str || 10,
+              dex: stats.dex || 10,
+              con: stats.con || 10,
+              int: stats.int || 10,
+              wis: stats.wis || 10,
+              cha: stats.cha || 10,
+            },
+            savingThrowProficiencies: {
+              str: false,
+              dex: false,
+              con: false,
+              int: false,
+              wis: false,
+              cha: false,
+            },
+            hp: {
+              current: stats.hpCurrent || 10,
+              max: stats.hpMax || 10,
+              temp: stats.tempHp || 0,
+            },
+            speed: stats.speed || 30,
+            armorClass: stats.ac || 10,
+            proficiencies: {
+              armor: 'Light Armor, Medium Armor, Shields',
+              weapons: 'Simple Weapons, Martial Weapons',
+              tools: "Thieves' Tools, Magitech Focus",
+              languages: 'Common, Celestial, Primordial',
+            },
+            inventory: inventory.map(i => `${i.name} (x${i.quantity}) - ${i.category}: ${i.description || ''}`),
+          }}
+        />
+      )}
     </div>
   );
 };
