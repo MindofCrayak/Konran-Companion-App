@@ -19,33 +19,46 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   };
 
   try {
-    // 1. Automatically resolve Project ID if not supplied or mismatched
-    let projectId = LEGENDKEEPER_PROJECT_ID?.trim();
-    if (projectId && projectId.includes('/')) {
-      // If user copied URL path like "workspaceId/projectId", extract the actual project ID (last segment)
-      projectId = projectId.split('/').filter(Boolean).pop();
+    const url = new URL(context.request.url);
+
+    // Debug endpoint: return list of all projects authorized for this API key
+    if (url.searchParams.has("projects")) {
+      const projRes = await fetch("https://www.legendkeeper.com/api/v3/projects", { headers });
+      const raw = await projRes.text();
+      return new Response(raw, {
+        status: projRes.status,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    // 1. Authoritative Project ID lookup via LegendKeeper /projects API
+    // Since LegendKeeper API keys are strictly project-scoped, querying /api/v3/projects guarantees the correct ID.
+    let projectId: string | undefined;
+    const projRes = await fetch("https://www.legendkeeper.com/api/v3/projects", { headers });
+    if (projRes.ok) {
+      const projData: any = await projRes.json();
+      const projects = Array.isArray(projData) ? projData : (projData.data || projData.projects || []);
+      if (projects.length > 0) {
+        // If a specific project was requested via query param or env var, check if it exists in the authorized list
+        const desired = url.searchParams.get("project_id") || (LEGENDKEEPER_PROJECT_ID ? LEGENDKEEPER_PROJECT_ID.split('/').pop() : undefined);
+        const match = desired ? projects.find((p: any) => p.id === desired || p.name?.toLowerCase() === desired.toLowerCase()) : null;
+        projectId = match ? match.id : projects[0].id;
+      }
+    }
+
+    // Fallback if projects lookup did not yield an ID
+    if (!projectId) {
+      if (LEGENDKEEPER_PROJECT_ID) {
+        projectId = LEGENDKEEPER_PROJECT_ID.split('/').filter(Boolean).pop();
+      }
     }
 
     if (!projectId) {
-      const projRes = await fetch("https://www.legendkeeper.com/api/v3/projects", { headers });
-      if (!projRes.ok) {
-        const errText = await projRes.text();
-        return new Response(
-          JSON.stringify({ error: `LegendKeeper project lookup failed (${projRes.status}): ${errText}` }),
-          { status: projRes.status, headers: { "Content-Type": "application/json" } }
-        );
-      }
-      const projData: any = await projRes.json();
-      projectId = projData.data?.[0]?.id || projData.projects?.[0]?.id;
-      if (!projectId) {
-        return new Response(
-          JSON.stringify({ error: "No projects found associated with this API key.", details: projData }),
-          { status: 404, headers: { "Content-Type": "application/json" } }
-        );
-      }
+      return new Response(
+        JSON.stringify({ error: "Could not resolve a valid LegendKeeper project ID for this API key." }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      );
     }
-
-    const url = new URL(context.request.url);
     const q = url.searchParams.get("q");
     const resourceId = url.searchParams.get("resource_id");
     const docId = url.searchParams.get("doc_id");
