@@ -21,6 +21,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     // 1. Automatically resolve Project ID if not supplied or mismatched
     let projectId = LEGENDKEEPER_PROJECT_ID?.trim();
+    if (projectId && projectId.includes('/')) {
+      // If user copied URL path like "workspaceId/projectId", extract the actual project ID (last segment)
+      projectId = projectId.split('/').filter(Boolean).pop();
+    }
+
     if (!projectId) {
       const projRes = await fetch("https://www.legendkeeper.com/api/v3/projects", { headers });
       if (!projRes.ok) {
@@ -31,10 +36,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         );
       }
       const projData: any = await projRes.json();
-      projectId = projData.data?.[0]?.id;
+      projectId = projData.data?.[0]?.id || projData.projects?.[0]?.id;
       if (!projectId) {
         return new Response(
-          JSON.stringify({ error: "No projects found associated with this API key." }),
+          JSON.stringify({ error: "No projects found associated with this API key.", details: projData }),
           { status: 404, headers: { "Content-Type": "application/json" } }
         );
       }
