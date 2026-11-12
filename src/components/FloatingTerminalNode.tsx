@@ -192,17 +192,19 @@ export const FloatingTerminalNode: React.FC<FloatingTerminalNodeProps> = ({
     );
   }
 
-  // Normal or Maximized layout (Adaptive Mobile Support: on narrow screens, snap to full screen node)
+  // Normal or Maximized layout (Adaptive Mobile Support: on narrow screens, snap to clean viewport node)
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const style: React.CSSProperties = (win.isMaximized || isMobile)
     ? {
         position: 'fixed',
-        left: isMobile ? '4px' : '12px',
-        top: isMobile ? '52px' : '64px',
-        right: isMobile ? '4px' : '12px',
-        bottom: isMobile ? '8px' : '76px',
-        width: 'auto',
+        left: isMobile ? '2.5vw' : '12px',
+        top: isMobile ? '48px' : '64px',
+        right: isMobile ? '2.5vw' : '12px',
+        bottom: isMobile ? '38px' : '76px',
+        width: isMobile ? '95vw' : 'auto',
+        maxWidth: isMobile ? '95vw' : 'none',
         height: 'auto',
+        maxHeight: isMobile ? 'calc(100dvh - 88px)' : 'none',
         zIndex: win.zIndex,
       }
     : {

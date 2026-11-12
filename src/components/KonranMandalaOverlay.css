@@ -1,0 +1,125 @@
+/* CRT Hologram Mandala Circuitry - 9-Petal Sacred Lotus Animations */
+
+@keyframes crt-flicker {
+  0% { opacity: 0.985; }
+  50% { opacity: 1.0; }
+  52% { opacity: 0.95; }
+  54% { opacity: 0.99; }
+  80% { opacity: 0.97; }
+  100% { opacity: 1.0; }
+}
+
+@keyframes scanline-roll {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(1000%); }
+}
+
+@keyframes mandala-pulse-glow {
+  0%, 100% { 
+    filter: drop-shadow(0 0 12px var(--mandala-primary, #f59e0b)) drop-shadow(0 0 28px var(--mandala-bus, rgba(217, 119, 6, 0.45))); 
+    transform: scale(1);
+  }
+  50% { 
+    filter: drop-shadow(0 0 24px var(--mandala-primary, #fbbf24)) drop-shadow(0 0 45px var(--mandala-bus, rgba(245, 158, 11, 0.65))); 
+    transform: scale(1.012);
+  }
+}
+
+@keyframes slow-spin-cw {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes slow-spin-ccw {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+@keyframes trace-dash {
+  to { stroke-dashoffset: -1000; }
+}
+
+@keyframes trace-dash-reverse {
+  to { stroke-dashoffset: 1000; }
+}
+
+/* 9-Petal Lotus Persistence Decay / Phosphor Fade Cycle */
+@keyframes lotus-phosphor-fade {
+  0% { 
+    opacity: 0.95; 
+    filter: drop-shadow(0 0 8px var(--mandala-primary, #ffb000)) drop-shadow(0 0 16px var(--mandala-glow, rgba(255,149,0,0.7))); 
+  }
+  30% { opacity: 0.7; }
+  65% { 
+    opacity: 0.22; 
+    filter: drop-shadow(0 0 2px var(--mandala-bus, rgba(245,158,11,0.3))); 
+  }
+  85% { opacity: 0.15; }
+  100% { 
+    opacity: 0.95; 
+    filter: drop-shadow(0 0 8px var(--mandala-primary, #ffb000)) drop-shadow(0 0 16px var(--mandala-glow, rgba(255,149,0,0.7))); 
+  }
+}
+
+/* Active Tracer Redraw Pulse along Petals */
+@keyframes lotus-redraw-sweep {
+  0% {
+    stroke-dashoffset: 1200;
+    opacity: 0.2;
+  }
+  15% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0.35;
+  }
+}
+
+@keyframes node-blink {
+  0%, 100% { opacity: 0.35; transform: scale(0.9); }
+  50% { 
+    opacity: 1; 
+    transform: scale(1.25); 
+    filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 14px var(--mandala-primary, #ffb000)); 
+  }
+}
+
+.slablet-mandala-container {
+  position: absolute;
+  inset: -14%;
+  pointer-events: none;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.lotus-fade-layer {
+  animation: lotus-phosphor-fade 6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.lotus-trace-sweep {
+  stroke-dasharray: 260 940;
+  animation: lotus-redraw-sweep 4.8s linear infinite;
+}
+
+.lotus-trace-sweep-delayed {
+  stroke-dasharray: 180 820;
+  animation: lotus-redraw-sweep 4.8s linear infinite;
+  animation-delay: -2.4s;
+}
+
+.mandala-rotator-cw {
+  animation: slow-spin-cw 140s linear infinite;
+  transform-origin: center center;
+}
+
+.mandala-rotator-ccw {
+  animation: slow-spin-ccw 90s linear infinite;
+  transform-origin: center center;
+}

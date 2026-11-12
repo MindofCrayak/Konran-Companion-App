@@ -26,6 +26,7 @@ import { useCharacter } from '../context/CharacterContext';
 import { playKeyClick, playOptionSelect } from '../utils/audio';
 import { getKonranGrandState } from '../utils/celestial';
 import { KonranGlobe } from './KonranGlobe';
+import { KonranMandalaOverlay } from './KonranMandalaOverlay';
 import { GrandChronometronModal } from './GrandChronometronModal';
 import { CodexModal } from './CodexModal';
 import { ReputationTrackerModal } from './ReputationTrackerModal';
@@ -435,7 +436,7 @@ export const SlabletDesktop = ({
 
         {/* TOP-RIGHT MINI ANALOG CHRONOMETRON */}
         <div 
-          className="flex items-center gap-3.5 cursor-pointer group bg-black/60 px-3 py-1.5 rounded-xl border border-[#5e3b1c]/80 hover:border-[#ffd700] hover:shadow-[0_0_20px_rgba(212,175,55,0.4)] transition-all"
+          className="flex items-center gap-2 sm:gap-3.5 cursor-pointer group bg-black/60 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl border border-[#5e3b1c]/80 hover:border-[#ffd700] hover:shadow-[0_0_20px_rgba(212,175,55,0.4)] transition-all"
           onClick={() => {
             playKeyClick();
             launchWindow('chronometron', 'Grand Chronometron (36h)');
@@ -443,7 +444,7 @@ export const SlabletDesktop = ({
           title="Grand Chronometron // Click to launch resizable screen node"
         >
           {/* Analog Dial */}
-          <div className="relative w-16 h-16 sm:w-18 sm:h-18 rounded-full border-[3px] border-[#8b6508] bg-[#030804] shadow-[0_0_15px_rgba(57,255,20,0.45)] group-hover:border-[#ffd700] group-hover:shadow-[0_0_25px_#ffd700] transition-all flex items-center justify-center overflow-hidden select-none">
+          <div className="relative w-8 h-8 sm:w-16 sm:h-16 rounded-full border-2 sm:border-[3px] border-[#8b6508] bg-[#030804] shadow-[0_0_10px_rgba(57,255,20,0.35)] sm:shadow-[0_0_15px_rgba(57,255,20,0.45)] group-hover:border-[#ffd700] group-hover:shadow-[0_0_25px_#ffd700] transition-all flex items-center justify-center overflow-hidden select-none">
             <img 
               src="/assets/clock-face.png" 
               alt="Konran Chronometer"
@@ -508,13 +509,13 @@ export const SlabletDesktop = ({
             </div>
 
             {/* Center Pivot */}
-            <div className="absolute w-2.5 h-2.5 rounded-full bg-[#ffd700] border border-white z-40 shadow-[0_0_6px_#ffd700] flex items-center justify-center pointer-events-none">
-              <div className="w-1 h-1 rounded-full bg-[#39ff14]" />
+            <div className="absolute w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[#ffd700] border border-white z-40 shadow-[0_0_6px_#ffd700] flex items-center justify-center pointer-events-none">
+              <div className="w-0.5 h-0.5 sm:w-1 sm:h-1 rounded-full bg-[#39ff14]" />
             </div>
           </div>
 
-          {/* Telemetry Badge */}
-          <div className="flex flex-col text-left font-mono leading-tight">
+          {/* Telemetry Badge (Desktop) */}
+          <div className="hidden sm:flex flex-col text-left font-mono leading-tight">
             <div className="flex items-center gap-1.5">
               <span className="text-[10px] text-[#a78b54] tracking-widest uppercase group-hover:text-[#ffd700] transition-colors">
                 Chronometron
@@ -528,6 +529,16 @@ export const SlabletDesktop = ({
             </span>
             <span className="text-[9.5px] text-[#ffd700] opacity-90 truncate max-w-[120px]">
               {liturgicalDay.name} ({liturgicalDay.god})
+            </span>
+          </div>
+
+          {/* Telemetry Badge (Mobile Compact) */}
+          <div className="flex sm:hidden flex-col text-left font-mono leading-none">
+            <span className="text-[10px] text-[#39ff14] font-bold">
+              {timeString.slice(0, 5)}
+            </span>
+            <span className="text-[8px] text-[#ffd700] opacity-80 truncate max-w-[65px]">
+              {liturgicalDay.god}
             </span>
           </div>
         </div>
@@ -565,8 +576,12 @@ export const SlabletDesktop = ({
             }} 
           />
 
-          {/* Sacred Celestial Astrolabe Transparent Mandala Frame Overlay (Over the World) */}
-          <div className="slablet-mandala-frame pointer-events-none" aria-hidden="true" />
+          {/* Sacred Celestial Astrolabe Dynamic Kinetic Mandala Circuitry (Adapts to Active Nyne Color) */}
+          <KonranMandalaOverlay
+            patronId={activeCharacter?.declaredDeity}
+            primaryColor={activePatronPalette?.primaryHex}
+            busColor={activePatronPalette?.busHex}
+          />
 
           <div className="slablet-moon-labels" aria-label="Orbiting moons">
             <span><i className="moon-dot moon-dot--amber" /> OLYSPHERE</span>
@@ -1027,8 +1042,8 @@ export const SlabletDesktop = ({
           <span><i className="moon-dot moon-dot--violet" /> Ayanath <small>watchtower</small></span>
         </div>
 
-        {/* Quick Launch Console Shortcuts in Bottom Ribbon */}
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* Quick Launch Console Shortcuts in Bottom Ribbon (Desktop Flow) */}
+        <div className="hidden md:flex items-center gap-2 flex-wrap slablet-ledger-buttons-group">
           <button 
             className="slablet-ledger-button" 
             onClick={(e) => {
@@ -1125,6 +1140,23 @@ export const SlabletDesktop = ({
           >
             <Plus aria-hidden="true" />
             <span>New Node</span>
+          </button>
+        </div>
+
+        {/* Mobile Ultra-Thin Quick Access Hub Pill */}
+        <div className="flex md:hidden items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              playKeyClick();
+              const rect = e.currentTarget.getBoundingClientRect();
+              setRadialMenuPos({ x: Math.max(10, rect.left - 180), y: Math.max(50, rect.top - 240) });
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#39ff14]/15 border border-[#39ff14]/60 text-[#39ff14] text-[10px] font-mono shadow-[0_0_8px_rgba(57,255,20,0.3)] active:scale-95 transition-all cursor-pointer"
+            title="Open Terminals Access Hub"
+          >
+            <Sparkles className="w-3 h-3 text-[#ffcc00]" />
+            <span className="font-bold tracking-wider">TERMINALS [{openWindows.length}]</span>
           </button>
         </div>
       </footer>
