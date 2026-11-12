@@ -20,7 +20,11 @@ import {
   Terminal,
   RotateCcw,
   Coins,
-  Download
+  Download,
+  ChevronDown,
+  Check,
+  KeyRound,
+  LogOut
 } from 'lucide-react';
 import { useCharacter } from '../context/CharacterContext';
 import { playKeyClick, playOptionSelect } from '../utils/audio';
@@ -48,7 +52,6 @@ import { DiscordAuthNodeView } from './DiscordAuthNodeView';
 import { AllegianceNodeView } from './AllegianceNodeView';
 import { CharacterCreatorNodeView } from './CharacterCreatorNodeView';
 import { ColdStartIgnition } from './ColdStartIgnition';
-import { CharacterSwitcherBar } from './CharacterSwitcherBar';
 import { LITURGICAL_PALETTES } from './FatedBadgeToken';
 import { CanvasWindowState, TerminalWindowType } from '../types';
 import './SlabletDesktop.css';
@@ -108,7 +111,37 @@ export const SlabletDesktop = ({
   onOpenKAMPSortingModal,
   onOpenFatedQuestionnaireModal,
 }: SlabletDesktopProps) => {
-  const { account, activeCharacter, resetDeityTrial } = useCharacter();
+  const { 
+    account, 
+    characters, 
+    activeCharacter, 
+    setActiveCharacterId, 
+    disconnectDiscordAccount, 
+    resetDeityTrial 
+  } = useCharacter();
+  const [isRosterOpen, setIsRosterOpen] = useState(false);
+
+  const toggleRole = () => {
+    playKeyClick();
+    const nextRole = account.role === 'player' ? 'archivist' : 'player';
+    try {
+      const stored = localStorage.getItem('konra_player_account_v1');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        parsed.role = nextRole;
+        localStorage.setItem('konra_player_account_v1', JSON.stringify(parsed));
+      }
+    } catch {
+      // Storage fallback
+    }
+    window.location.reload();
+  };
+
+  const handleSelectCharacter = (id: string | null) => {
+    playOptionSelect();
+    setActiveCharacterId(id);
+    setIsRosterOpen(false);
+  };
   const [now, setNow] = useState(() => Date.now());
   const [notice, setNotice] = useState('');
   const [showChronometronModal, setShowChronometronModal] = useState(false);
@@ -346,36 +379,135 @@ export const SlabletDesktop = ({
         />
       )}
 
-      {/* Character Switcher & Liturgical Attunement Bar */}
-      <div className="relative z-30" onClick={(e) => e.stopPropagation()}>
-        <CharacterSwitcherBar
-          onOpenKAMPKodex={() => launchWindow('kamp', 'The K.A.M.P. Kodex', '#8b1e1e')}
-          onOpenKAMPSortingQuiz={() => launchWindow('kamp-quiz', 'K.A.M.P. Sorting Evaluation', '#8b1e1e')}
-          onOpenFatedQuestionnaire={() => launchWindow('fated-questionnaire', 'Questionnaire of the Fated', '#ffcc00')}
-          onOpenReputation={() => launchWindow('reputation', 'Faction & Providence Standings', '#39ff14')}
-          onOpenDiscord={() => launchWindow('discord', 'Discord Identity & Sync', '#5865F2')}
-          onOpenAllegiance={() => launchWindow('allegiance', 'Stone of Declaration // Covenant', '#ffd700')}
-          onOpenCharacterCreator={() => launchWindow('character-creator', 'Enroll New Character Node', '#39ff14')}
-        />
-      </div>
-
       <div className="slablet-grid" aria-hidden="true" />
       <div className="slablet-vignette" aria-hidden="true" />
       <div className="slablet-crt" aria-hidden="true" />
 
-      {/* 1. TOP HUD HEADER RIBBON */}
-      <header className="slablet-hud">
-        <div className="slablet-brand">
+      {/* 1. SINGLE UNIFIED SLIM TOP HUD RIBBON (38px height) */}
+      <header className="slablet-hud" onClick={(e) => e.stopPropagation()}>
+        {/* Left: Status Dot & Persona Selector Dropdown */}
+        <div className="flex items-center gap-2">
           <span className="slablet-status-light" />
-          <div>
-            <p className="slablet-eyebrow">Konran Spatial OS // {activePatronPalette.mineral}</p>
-            <p className="slablet-system-name">OBSYDIANHEART SLABLET MK IV</p>
+          
+          <div className="relative">
+            <button
+              onClick={() => {
+                playKeyClick();
+                setIsRosterOpen(!isRosterOpen);
+              }}
+              className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/60 hover:bg-black/90 border border-[var(--patron-primary)]/50 hover:border-[var(--patron-primary)] text-xs font-mono text-white transition-all cursor-pointer shadow-[0_0_8px_var(--patron-glow)]"
+              title="Switch Active Persona or Create Character Node"
+            >
+              <CircleUserRound className="w-3.5 h-3.5 text-[var(--patron-primary)] shrink-0" />
+              <span className="font-bold tracking-wide truncate max-w-[110px] sm:max-w-[150px]">
+                {activeCharacter ? activeCharacter.name : (account.displayName || 'Select Persona')}
+              </span>
+              <ChevronDown className="w-3 h-3 text-white/50 shrink-0" />
+            </button>
+
+            {/* Persona Roster Dropdown Panel */}
+            {isRosterOpen && (
+              <div 
+                className="absolute left-0 top-full mt-1.5 w-72 bg-[#050e09]/98 border-2 border-[var(--patron-primary)] rounded-sm shadow-[0_0_35px_rgba(0,0,0,0.8)] p-2 z-50 animate-fadeIn font-mono text-xs"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="text-[10px] text-[var(--patron-primary)] uppercase tracking-widest px-2 py-1 border-b border-[var(--patron-primary)]/20 flex items-center justify-between">
+                  <span>Active Roster</span>
+                  <span className="text-white/40">{characters.length} Registered</span>
+                </div>
+
+                <div className="max-h-56 overflow-y-auto space-y-1 my-1">
+                  {characters.map((c) => {
+                    const isSelected = activeCharacter?.id === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        onClick={() => handleSelectCharacter(c.id)}
+                        className={`w-full text-left px-2 py-1.5 rounded-sm flex items-center justify-between cursor-pointer transition-colors ${
+                          isSelected 
+                            ? 'bg-[var(--patron-primary)]/20 text-[var(--patron-primary)] border border-[var(--patron-primary)]/50' 
+                            : 'text-white/80 hover:bg-white/10 hover:text-white'
+                        }`}
+                      >
+                        <div className="truncate">
+                          <div className="font-bold flex items-center gap-1.5">
+                            <span>{c.name}</span>
+                            {isSelected && <Check className="w-3 h-3 text-[var(--patron-primary)]" />}
+                          </div>
+                          <div className="text-[10px] text-white/50 truncate">
+                            Lv.{c.level} {c.species} {c.characterClass}
+                          </div>
+                        </div>
+                        {c.declaredDeity && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-black/60 border border-[#ffcc00]/40 text-[#ffcc00] shrink-0 ml-1">
+                            {c.declaredDeity}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Quick actions inside roster dropdown */}
+                <div className="pt-1.5 border-t border-[var(--patron-primary)]/20 space-y-1">
+                  <button
+                    onClick={() => {
+                      playKeyClick();
+                      setIsRosterOpen(false);
+                      launchWindow('character-creator', 'Enroll New Character Node', '#39ff14');
+                    }}
+                    className="w-full py-1 px-2 bg-[var(--patron-primary)]/15 hover:bg-[var(--patron-primary)]/25 border border-[var(--patron-primary)]/50 rounded-sm text-[var(--patron-primary)] font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors text-[11px]"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>+ Enroll New Character</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      playKeyClick();
+                      setIsRosterOpen(false);
+                      launchWindow('discord', 'Discord Identity & Sync', '#5865F2');
+                    }}
+                    className="w-full py-1 px-2 bg-[#5865F2]/20 hover:bg-[#5865F2]/30 border border-[#5865F2]/50 rounded-sm text-white flex items-center justify-center gap-1.5 cursor-pointer transition-colors text-[10px]"
+                  >
+                    <span>Discord Identity &amp; Sync</span>
+                  </button>
+
+                  <button
+                    onClick={toggleRole}
+                    className="w-full py-1 px-2 bg-black/40 hover:bg-black/60 border border-white/20 rounded-sm text-[#ffcc00]/80 flex items-center justify-center gap-1.5 cursor-pointer transition-colors text-[10px]"
+                  >
+                    <KeyRound className="w-3 h-3 text-purple-400" />
+                    <span>{account.role === 'archivist' ? 'Archivist Mode Active' : 'Switch to Archivist Mode'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Liturgical Covenant Badge */}
+          {activeCharacter?.declaredDeity && (
+            <button
+              onClick={() => {
+                playKeyClick();
+                launchWindow('allegiance', 'Stone of Declaration // Covenant', '#ffd700');
+              }}
+              className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded bg-black/50 border border-[#ffd700]/40 hover:border-[#ffd700] text-[10px] font-mono transition-all cursor-pointer"
+              title="Click to view Divine Covenant"
+            >
+              <Sparkles className="w-2.5 h-2.5 text-[#ffd700]" />
+              <span className="text-[#ffd700] font-bold">{activeCharacter.declaredDeity}</span>
+            </button>
+          )}
+
+          <span className="hidden xl:inline text-[9.5px] font-mono tracking-widest text-[var(--patron-primary)] opacity-60 ml-1">
+            OBSYDIANHEART MK IV
+          </span>
         </div>
 
         {/* Center Quick Window Dock Bar */}
-        <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 bg-black/60 rounded-full border border-[var(--patron-primary)]/40 shadow-[0_0_15px_var(--patron-glow)]">
-          <span className="text-[10px] font-mono data-stream-text mr-1 uppercase">Nodes:</span>
+        <div className="hidden lg:flex items-center gap-1 px-2.5 py-0.5 bg-black/60 rounded-full border border-[var(--patron-primary)]/40 shadow-[0_0_12px_var(--patron-glow)]">
+          <span className="text-[9px] font-mono data-stream-text mr-1 uppercase">Nodes:</span>
           {openWindows.map(win => (
             <button
               key={win.id}
@@ -384,7 +516,7 @@ export const SlabletDesktop = ({
                 if (win.isMinimized) toggleMinimizeWindow(win.id);
                 focusWindow(win.id);
               }}
-              className="flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-mono transition-all cursor-pointer"
+              className="flex items-center gap-1 px-2 py-0.5 rounded text-[9.5px] font-mono transition-all cursor-pointer"
               style={{
                 backgroundColor: win.isMinimized ? 'rgba(255,255,255,0.05)' : 'var(--patron-glow)',
                 borderColor: 'var(--patron-primary)',
@@ -394,7 +526,7 @@ export const SlabletDesktop = ({
               title={`Switch to ${win.title}`}
             >
               <span className="w-1.5 h-1.5 rounded-full conduit-trace-active" />
-              <span className="truncate max-w-[90px]">{win.title}</span>
+              <span className="truncate max-w-[80px]">{win.title}</span>
             </button>
           ))}
           <button
@@ -404,22 +536,68 @@ export const SlabletDesktop = ({
               const rect = e.currentTarget.getBoundingClientRect();
               setRadialMenuPos({ x: rect.left, y: rect.bottom + 8 });
             }}
-            className="p-1 data-stream-text hover:bg-white/10 rounded-full cursor-pointer ml-1"
+            className="p-1 data-stream-text hover:bg-white/10 rounded-full cursor-pointer ml-0.5"
             title="Deploy New Terminal Node"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-3 h-3" />
           </button>
         </div>
 
-        {/* Active Character Quick Pill & Cold Start Re-Trigger */}
-        <div className="flex items-center gap-3">
-          <div className="slablet-character">
-            <CircleUserRound aria-hidden="true" />
-            <span>
-              <small>STONE OF DECLARATION: {activeCharacter?.declaredDeity?.toUpperCase() || 'UNALIGNED'}</small>
-              <strong>{activeCharacter?.name || account.displayName || 'Undeclared Persona'}</strong>
+        {/* Right Section: Mini 20px Chronometron & Lotus Lock */}
+        <div className="flex items-center gap-2">
+          {/* Mini Analog Chronometron Widget */}
+          <div 
+            className="flex items-center gap-1.5 cursor-pointer group bg-black/60 px-2 py-0.5 rounded border border-[#5e3b1c]/80 hover:border-[#ffd700] hover:shadow-[0_0_15px_rgba(212,175,55,0.35)] transition-all"
+            onClick={() => {
+              playKeyClick();
+              launchWindow('chronometron', 'Grand Chronometron (36h)');
+            }}
+            title="Grand Chronometron // Click to launch resizable screen node"
+          >
+            {/* Analog Dial (20px diameter) */}
+            <div className="relative w-5 h-5 rounded-full border border-[#8b6508] bg-[#030804] shadow-[0_0_6px_rgba(57,255,20,0.3)] group-hover:border-[#ffd700] transition-all flex items-center justify-center overflow-hidden select-none">
+              <img 
+                src="/assets/clock-face.png" 
+                alt="Konran Chronometer"
+                className="absolute inset-0 w-full h-full object-cover filter contrast-150 brightness-110"
+              />
+              <div 
+                className="absolute pointer-events-none transition-transform duration-75 z-10"
+                style={{ 
+                  width: '46%',
+                  height: '46%',
+                  left: '27%',
+                  top: '13.5%',
+                  transformOrigin: '50% 79.36%',
+                  transform: `rotate(${hourAngle}deg)`
+                }}
+              >
+                <img src="/assets/hand-hour.png" alt="Hour Hand" className="w-full h-full object-contain filter drop-shadow-[0_0_2px_#000]" />
+              </div>
+              <div 
+                className="absolute pointer-events-none transition-transform duration-75 z-20"
+                style={{ 
+                  width: '56%',
+                  height: '56%',
+                  left: '22%',
+                  top: '4.2%',
+                  transformOrigin: '49.84% 81.84%',
+                  transform: `rotate(${minuteAngle}deg)`
+                }}
+              >
+                <img src="/assets/hour-minute.png" alt="Minute Hand" className="w-full h-full object-contain filter drop-shadow-[0_0_2px_#000]" />
+              </div>
+            </div>
+
+            {/* Digital Readout */}
+            <span className="text-[10px] font-mono text-[#39ff14] font-bold">
+              {timeString.slice(0, 5)}
+            </span>
+            <span className="hidden sm:inline text-[8.5px] font-mono text-[#ffd700] opacity-80">
+              {liturgicalDay.god}
             </span>
           </div>
+
           <button
             type="button"
             onClick={(e) => {
@@ -427,120 +605,11 @@ export const SlabletDesktop = ({
               playKeyClick();
               setIsIgnited(false);
             }}
-            className="px-2.5 py-1 rounded border border-[#d4af37]/50 bg-black/70 hover:border-[var(--patron-bus)] text-[10px] font-mono text-[#d4af37] hover:text-white cursor-pointer transition-colors"
+            className="px-2 py-0.5 rounded border border-[#d4af37]/50 bg-black/70 hover:border-[var(--patron-bus)] text-[9.5px] font-mono text-[#d4af37] hover:text-white cursor-pointer transition-colors"
             title="Re-enter Cold Start Ignition Ritual"
           >
             Lotus Lock
           </button>
-        </div>
-
-        {/* TOP-RIGHT MINI ANALOG CHRONOMETRON */}
-        <div 
-          className="flex items-center gap-2 sm:gap-3.5 cursor-pointer group bg-black/60 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl border border-[#5e3b1c]/80 hover:border-[#ffd700] hover:shadow-[0_0_20px_rgba(212,175,55,0.4)] transition-all"
-          onClick={() => {
-            playKeyClick();
-            launchWindow('chronometron', 'Grand Chronometron (36h)');
-          }}
-          title="Grand Chronometron // Click to launch resizable screen node"
-        >
-          {/* Analog Dial */}
-          <div className="relative w-8 h-8 sm:w-16 sm:h-16 rounded-full border-2 sm:border-[3px] border-[#8b6508] bg-[#030804] shadow-[0_0_10px_rgba(57,255,20,0.35)] sm:shadow-[0_0_15px_rgba(57,255,20,0.45)] group-hover:border-[#ffd700] group-hover:shadow-[0_0_25px_#ffd700] transition-all flex items-center justify-center overflow-hidden select-none">
-            <img 
-              src="/assets/clock-face.png" 
-              alt="Konran Chronometer"
-              className="absolute inset-0 w-full h-full object-cover filter contrast-150 brightness-110"
-            />
-
-            {/* Hour Spade Hand */}
-            <div 
-              className="absolute pointer-events-none transition-transform duration-75 z-10"
-              style={{ 
-                width: '46%',
-                height: '46%',
-                left: '27%',
-                top: '13.5%',
-                transformOrigin: '50% 79.36%',
-                transform: `rotate(${hourAngle}deg)`
-              }}
-            >
-              <img 
-                src="/assets/hand-hour.png" 
-                alt="Hour Hand" 
-                className="w-full h-full object-contain filter drop-shadow-[0_0_4px_#000] brightness-125" 
-              />
-            </div>
-
-            {/* Minute Lance */}
-            <div 
-              className="absolute pointer-events-none transition-transform duration-75 z-20"
-              style={{ 
-                width: '56%',
-                height: '56%',
-                left: '22%',
-                top: '4.2%',
-                transformOrigin: '49.84% 81.84%',
-                transform: `rotate(${minuteAngle}deg)`
-              }}
-            >
-              <img 
-                src="/assets/hour-minute.png" 
-                alt="Minute Hand" 
-                className="w-full h-full object-contain filter drop-shadow-[0_0_4px_#000] brightness-125" 
-              />
-            </div>
-
-            {/* Ruby Second Needle */}
-            <div 
-              className="absolute pointer-events-none transition-transform duration-75 z-30"
-              style={{ 
-                width: '58%',
-                height: '58%',
-                left: '21%',
-                top: '2.8%',
-                transformOrigin: '50% 81.30%',
-                transform: `rotate(${secondAngle}deg)`
-              }}
-            >
-              <img 
-                src="/assets/hand-second.png" 
-                alt="Second Hand" 
-                className="w-full h-full object-contain filter drop-shadow-[0_0_4px_#ff0000]" 
-              />
-            </div>
-
-            {/* Center Pivot */}
-            <div className="absolute w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[#ffd700] border border-white z-40 shadow-[0_0_6px_#ffd700] flex items-center justify-center pointer-events-none">
-              <div className="w-0.5 h-0.5 sm:w-1 sm:h-1 rounded-full bg-[#39ff14]" />
-            </div>
-          </div>
-
-          {/* Telemetry Badge (Desktop) */}
-          <div className="hidden sm:flex flex-col text-left font-mono leading-tight">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-[#a78b54] tracking-widest uppercase group-hover:text-[#ffd700] transition-colors">
-                Chronometron
-              </span>
-              <span className="text-[9px] text-[#ffdf79] opacity-75">
-                {timeString}
-              </span>
-            </div>
-            <span className="text-xs text-[#39ff14] font-bold">
-              {isNightwatch ? 'PASS II // NIGHT' : 'PASS I // DAY'}
-            </span>
-            <span className="text-[9.5px] text-[#ffd700] opacity-90 truncate max-w-[120px]">
-              {liturgicalDay.name} ({liturgicalDay.god})
-            </span>
-          </div>
-
-          {/* Telemetry Badge (Mobile Compact) */}
-          <div className="flex sm:hidden flex-col text-left font-mono leading-none">
-            <span className="text-[10px] text-[#39ff14] font-bold">
-              {timeString.slice(0, 5)}
-            </span>
-            <span className="text-[8px] text-[#ffd700] opacity-80 truncate max-w-[65px]">
-              {liturgicalDay.god}
-            </span>
-          </div>
         </div>
       </header>
 
@@ -1030,121 +1099,125 @@ export const SlabletDesktop = ({
         {notice && <div className="slablet-notice" role="status">{notice}</div>}
       </section>
 
-      {/* 3. BOTTOM MENU RIBBON FOOTER */}
-      <footer className="slablet-footer">
-        <div className="slablet-coordinates">
-          <Compass aria-hidden="true" />
-          <span><small>PLANETARY FIX</small><strong>47° 12′ N&nbsp; / &nbsp;08° 44′ E</strong></span>
+      {/* 3. BOTTOM MENU RIBBON FOOTER (Strictly 30px height) */}
+      <footer className="slablet-footer" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2 sm:gap-4 text-[10px] font-mono text-[var(--patron-primary)]">
+          <div className="flex items-center gap-1.5">
+            <Compass className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            <span className="text-white/60 hidden sm:inline">PLANETARY FIX:</span>
+            <strong className="text-[var(--patron-bus)]">47° 12′ N / 08° 44′ E</strong>
+          </div>
+          <span className="hidden md:inline text-white/20">|</span>
+          <div className="hidden md:flex items-center gap-3 text-white/70">
+            <span className="flex items-center gap-1"><i className="moon-dot moon-dot--amber" /> Olysphere</span>
+            <span className="flex items-center gap-1"><i className="moon-dot moon-dot--violet" /> Ayanath</span>
+          </div>
         </div>
 
-        <div className="slablet-moons-footer">
-          <span><i className="moon-dot moon-dot--amber" /> Olysphere <small>sentinel</small></span>
-          <span><i className="moon-dot moon-dot--violet" /> Ayanath <small>watchtower</small></span>
-        </div>
-
-        {/* Quick Launch Console Shortcuts in Bottom Ribbon (Desktop Flow) */}
-        <div className="hidden md:flex items-center gap-2 flex-wrap slablet-ledger-buttons-group">
+        {/* Quick Launch Console Micro-Pills */}
+        <div className="hidden md:flex items-center gap-1.5">
           <button 
-            className="slablet-ledger-button" 
-            onClick={(e) => {
-              e.stopPropagation();
+            className="slablet-micro-pill" 
+            onClick={() => {
+              playKeyClick();
               launchWindow('character-sheet', '5.5e Sheet, Inventory & Clergy');
             }}
+            title="5.5e Sheet & Inventory"
           >
-            <CircleUserRound aria-hidden="true" />
-            <span>5.5e Sheet &amp; Inventory</span>
-            <ArrowUpRight aria-hidden="true" />
+            <CircleUserRound className="w-3 h-3 text-[var(--patron-primary)]" />
+            <span>Sheet</span>
           </button>
 
           <button 
-            className="slablet-ledger-button" 
-            onClick={(e) => {
-              e.stopPropagation();
+            className="slablet-micro-pill" 
+            onClick={() => {
+              playKeyClick();
               if (onOpenFatedQuestionnaireModal) onOpenFatedQuestionnaireModal();
               else launchWindow('fated-questionnaire', 'Questionnaire of the Fated');
             }}
+            title="Questionnaire of the Fated"
           >
-            <Sparkles aria-hidden="true" />
-            <span>Fated Questionnaire</span>
-            <ArrowUpRight aria-hidden="true" />
+            <Sparkles className="w-3 h-3 text-[#ffcc00]" />
+            <span>Fated</span>
           </button>
 
           <button 
-            className="slablet-ledger-button" 
-            onClick={(e) => {
-              e.stopPropagation();
+            className="slablet-micro-pill" 
+            onClick={() => {
+              playKeyClick();
               if (onOpenKAMPSortingModal) onOpenKAMPSortingModal();
               else launchWindow('kamp-quiz', 'K.A.M.P. Sorting Evaluation');
             }}
+            title="K.A.M.P. Sorting Quiz"
           >
-            <GraduationCap aria-hidden="true" />
-            <span>K.A.M.P. Sorting Quiz</span>
-            <ArrowUpRight aria-hidden="true" />
+            <GraduationCap className="w-3 h-3 text-[#39ff14]" />
+            <span>K.A.M.P.</span>
           </button>
 
           <button 
-            className="slablet-ledger-button" 
-            onClick={(e) => {
-              e.stopPropagation();
+            className="slablet-micro-pill" 
+            onClick={() => {
+              playKeyClick();
               if (onOpenKAMPKodexModal) onOpenKAMPKodexModal();
               else launchWindow('kamp', 'The K.A.M.P. Kodex');
             }}
+            title="The K.A.M.P. Kodex"
           >
-            <GraduationCap aria-hidden="true" />
-            <span>K.A.M.P. Kodex</span>
-            <ArrowUpRight aria-hidden="true" />
+            <BookOpen className="w-3 h-3 text-[#f87171]" />
+            <span>Kodex</span>
           </button>
 
           <button 
-            className="slablet-ledger-button" 
-            onClick={(e) => {
-              e.stopPropagation();
+            className="slablet-micro-pill" 
+            onClick={() => {
+              playKeyClick();
               launchWindow('codex', 'Pantheon Codex');
             }}
+            title="Pantheon Codex"
           >
-            <BookOpen aria-hidden="true" />
-            <span>Pantheon Codex</span>
-            <ArrowUpRight aria-hidden="true" />
+            <BookOpen className="w-3 h-3 text-[#a78bfa]" />
+            <span>Pantheon</span>
           </button>
 
           <button 
-            className="slablet-ledger-button" 
-            onClick={(e) => {
-              e.stopPropagation();
+            className="slablet-micro-pill" 
+            onClick={() => {
+              playKeyClick();
               launchWindow('reputation', 'Faction Standings Ledger');
             }}
+            title="Standings Ledger"
           >
-            <Shield aria-hidden="true" />
+            <Shield className="w-3 h-3 text-[#34d399]" />
             <span>Standings</span>
-            <ArrowUpRight aria-hidden="true" />
           </button>
 
           <button 
-            className="slablet-ledger-button" 
-            onClick={(e) => {
-              e.stopPropagation();
+            className="slablet-micro-pill" 
+            onClick={() => {
+              playKeyClick();
               launchWindow('lore-atlas', 'Grand Codex & Atlas // LegendKeeper Live', '#ffd700');
             }}
+            title="LegendKeeper Live Lore Atlas"
           >
-            <Compass aria-hidden="true" />
-            <span>LK Atlas</span>
-            <ArrowUpRight aria-hidden="true" />
+            <Compass className="w-3 h-3 text-[#ffd700]" />
+            <span>Atlas</span>
           </button>
 
           <button 
-            className="slablet-ledger-button" 
-            onClick={(e) => {
-              e.stopPropagation();
+            className="slablet-micro-pill slablet-micro-pill--accent" 
+            onClick={() => {
+              playKeyClick();
               launchWindow('custom', 'Field Terminal', '#39ff14');
             }}
+            title="New Terminal Node"
           >
-            <Plus aria-hidden="true" />
-            <span>New Node</span>
+            <Plus className="w-3 h-3" />
+            <span>+ Node</span>
           </button>
         </div>
 
-        {/* Mobile Ultra-Thin Quick Access Hub Pill */}
-        <div className="flex md:hidden items-center gap-2">
+        {/* Mobile Micro-Pill */}
+        <div className="flex md:hidden items-center gap-1.5">
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -1152,10 +1225,10 @@ export const SlabletDesktop = ({
               const rect = e.currentTarget.getBoundingClientRect();
               setRadialMenuPos({ x: Math.max(10, rect.left - 180), y: Math.max(50, rect.top - 240) });
             }}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#39ff14]/15 border border-[#39ff14]/60 text-[#39ff14] text-[10px] font-mono shadow-[0_0_8px_rgba(57,255,20,0.3)] active:scale-95 transition-all cursor-pointer"
+            className="flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--patron-primary)]/15 border border-[var(--patron-primary)]/60 text-[var(--patron-primary)] text-[10px] font-mono cursor-pointer"
             title="Open Terminals Access Hub"
           >
-            <Sparkles className="w-3 h-3 text-[#ffcc00]" />
+            <Sparkles className="w-2.5 h-2.5 text-[#ffcc00]" />
             <span className="font-bold tracking-wider">TERMINALS [{openWindows.length}]</span>
           </button>
         </div>

@@ -1,125 +1,106 @@
-/* CRT Hologram Mandala Circuitry - 9-Petal Sacred Lotus Animations */
+/* Hologram Circuitry & CRT Shimmer Astrolabe */
 
-@keyframes crt-flicker {
-  0% { opacity: 0.985; }
-  50% { opacity: 1.0; }
-  52% { opacity: 0.95; }
-  54% { opacity: 0.99; }
-  80% { opacity: 0.97; }
-  100% { opacity: 1.0; }
+@keyframes crt-shimmer {
+  0%, 100% {
+    opacity: 0.7;
+    filter: drop-shadow(0 0 4px var(--mandala-primary, #f59e0b)) drop-shadow(0 0 10px var(--mandala-bus, rgba(217, 119, 6, 0.2)));
+  }
+  50% {
+    opacity: 0.9;
+    filter: drop-shadow(0 0 8px var(--mandala-primary, #fbbf24)) drop-shadow(0 0 16px var(--mandala-bus, rgba(245, 158, 11, 0.35)));
+  }
 }
 
-@keyframes scanline-roll {
+@keyframes scanline-pass {
   0% { transform: translateY(-100%); }
-  100% { transform: translateY(1000%); }
+  100% { transform: translateY(200%); }
 }
 
-@keyframes mandala-pulse-glow {
-  0%, 100% { 
-    filter: drop-shadow(0 0 12px var(--mandala-primary, #f59e0b)) drop-shadow(0 0 28px var(--mandala-bus, rgba(217, 119, 6, 0.45))); 
-    transform: scale(1);
-  }
-  50% { 
-    filter: drop-shadow(0 0 24px var(--mandala-primary, #fbbf24)) drop-shadow(0 0 45px var(--mandala-bus, rgba(245, 158, 11, 0.65))); 
-    transform: scale(1.012);
-  }
+@keyframes circuit-trace-dash {
+  to { stroke-dashoffset: -500; }
 }
 
-@keyframes slow-spin-cw {
+@keyframes circuit-trace-reverse {
+  to { stroke-dashoffset: 500; }
+}
+
+@keyframes slow-orbit-cw {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
-@keyframes slow-spin-ccw {
+@keyframes slow-orbit-ccw {
   from { transform: rotate(360deg); }
   to { transform: rotate(0deg); }
 }
 
-@keyframes trace-dash {
-  to { stroke-dashoffset: -1000; }
-}
-
-@keyframes trace-dash-reverse {
-  to { stroke-dashoffset: 1000; }
-}
-
-/* 9-Petal Lotus Persistence Decay / Phosphor Fade Cycle */
-@keyframes lotus-phosphor-fade {
-  0% { 
-    opacity: 0.95; 
-    filter: drop-shadow(0 0 8px var(--mandala-primary, #ffb000)) drop-shadow(0 0 16px var(--mandala-glow, rgba(255,149,0,0.7))); 
-  }
-  30% { opacity: 0.7; }
-  65% { 
-    opacity: 0.22; 
-    filter: drop-shadow(0 0 2px var(--mandala-bus, rgba(245,158,11,0.3))); 
-  }
-  85% { opacity: 0.15; }
-  100% { 
-    opacity: 0.95; 
-    filter: drop-shadow(0 0 8px var(--mandala-primary, #ffb000)) drop-shadow(0 0 16px var(--mandala-glow, rgba(255,149,0,0.7))); 
-  }
-}
-
-/* Active Tracer Redraw Pulse along Petals */
-@keyframes lotus-redraw-sweep {
-  0% {
-    stroke-dashoffset: 1200;
-    opacity: 0.2;
-  }
-  15% {
-    opacity: 1;
-  }
-  80% {
-    opacity: 1;
-  }
-  100% {
-    stroke-dashoffset: 0;
-    opacity: 0.35;
-  }
-}
-
-@keyframes node-blink {
-  0%, 100% { opacity: 0.35; transform: scale(0.9); }
-  50% { 
-    opacity: 1; 
-    transform: scale(1.25); 
-    filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 14px var(--mandala-primary, #ffb000)); 
-  }
+@keyframes phosphor-flicker {
+  0% { opacity: 0.96; }
+  25% { opacity: 1; }
+  50% { opacity: 0.95; }
+  75% { opacity: 0.99; }
+  100% { opacity: 0.96; }
 }
 
 .slablet-mandala-container {
   position: absolute;
-  inset: -14%;
+  inset: -12%;
   pointer-events: none;
   z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
   user-select: none;
+  animation: phosphor-flicker 0.25s infinite;
 }
 
-.lotus-fade-layer {
-  animation: lotus-phosphor-fade 6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+/* CRT Scanlines across the holographic field */
+.hologram-crt-scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.35) 3px,
+    rgba(0, 0, 0, 0.35) 4px
+  );
+  opacity: 0.35;
+  border-radius: 50%;
+  mix-blend-mode: overlay;
 }
 
-.lotus-trace-sweep {
-  stroke-dasharray: 260 940;
-  animation: lotus-redraw-sweep 4.8s linear infinite;
+/* Subtle holographic vertical sweep shimmer */
+.hologram-sweep-beam {
+  position: absolute;
+  inset-x: 0;
+  height: 20%;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--mandala-glow, rgba(245, 158, 11, 0.08)) 50%,
+    transparent 100%
+  );
+  animation: scanline-pass 9s linear infinite;
+  pointer-events: none;
+  border-radius: 50%;
 }
 
-.lotus-trace-sweep-delayed {
-  stroke-dasharray: 180 820;
-  animation: lotus-redraw-sweep 4.8s linear infinite;
-  animation-delay: -2.4s;
+.circuit-spin-cw {
+  animation: slow-orbit-cw 200s linear infinite;
+  transform-origin: 400px 400px;
 }
 
-.mandala-rotator-cw {
-  animation: slow-spin-cw 140s linear infinite;
-  transform-origin: center center;
+.circuit-spin-ccw {
+  animation: slow-orbit-ccw 160s linear infinite;
+  transform-origin: 400px 400px;
 }
 
-.mandala-rotator-ccw {
-  animation: slow-spin-ccw 90s linear infinite;
-  transform-origin: center center;
+.circuit-dash-anim {
+  animation: circuit-trace-dash 45s linear infinite;
+}
+
+.circuit-dash-anim-rev {
+  animation: circuit-trace-reverse 55s linear infinite;
 }
