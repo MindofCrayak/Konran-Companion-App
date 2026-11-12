@@ -223,7 +223,7 @@ export const SlabletDesktop = ({
       else if (type === 'lore-atlas') { width = Math.min(960, Math.max(360, window.innerWidth - 40)); height = Math.min(760, Math.max(420, window.innerHeight - 110)); }
       else if (type === 'discord') { width = Math.min(640, Math.max(360, window.innerWidth - 40)); height = Math.min(540, Math.max(380, window.innerHeight - 120)); }
       else if (type === 'allegiance') { width = Math.min(880, Math.max(360, window.innerWidth - 40)); height = Math.min(680, Math.max(400, window.innerHeight - 120)); }
-      else if (type === 'character-creator') { width = Math.min(680, Math.max(360, window.innerWidth - 40)); height = Math.min(680, Math.max(400, window.innerHeight - 120)); }
+      else if (type === 'character-creator') { width = Math.min(760, Math.max(360, window.innerWidth - 40)); height = Math.min(720, Math.max(420, window.innerHeight - 110)); }
       else if (type === 'party') { width = 520; height = 460; }
       else if (type === 'export-5e') { width = 480; height = 520; }
       else if (type === 'custom') { width = 440; height = 380; }
@@ -249,10 +249,11 @@ export const SlabletDesktop = ({
 
       // Calculate staggered or centered offset
       const count = prev.filter(w => w.isOpen).length;
-      const offsetX = type === 'kamp' || type === 'kamp-quiz' || type === 'fated-questionnaire'
+      const isCentered = type === 'kamp' || type === 'kamp-quiz' || type === 'fated-questionnaire' || type === 'character-creator';
+      const offsetX = isCentered
         ? Math.max(12, Math.round((window.innerWidth - width) / 2))
         : 50 + (count % 5) * 35;
-      const offsetY = type === 'kamp' || type === 'kamp-quiz' || type === 'fated-questionnaire'
+      const offsetY = isCentered
         ? Math.max(60, Math.round((window.innerHeight - height) / 2))
         : 80 + (count % 4) * 30;
 

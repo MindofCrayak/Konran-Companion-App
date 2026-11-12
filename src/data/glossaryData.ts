@@ -2,7 +2,7 @@
 
 export interface GlossaryEntry {
   id: string;
-  category: 'introduction' | 'planes' | 'deities' | 'demigods' | 'sects' | 'dc_checks' | 'titles';
+  category: 'introduction' | 'planes' | 'deities' | 'demigods' | 'sects' | 'dc_checks' | 'titles' | 'factions' | 'world';
   title: string;
   subtitle?: string;
   tags: string[];
@@ -123,5 +123,43 @@ Seven Demigods: Audyanka (Shadow Elf), Konquestya (Devil Queen), Jarkyth (Tanar\
     subtitle: 'The Celestial Round Table',
     tags: ['Council', 'Luna Prime', 'Senate', 'Emyssari', 'Magystrate'],
     content: `Housed in a secret sanctuary on Luna Prime orbiting Konran. Features a colossal round table with a living holographic model of Konran at the center, surrounded by nine planetary thrones for The Nyne, flanked by a senate of Emyssari, Dyosans, and church archivists.`
+  },
+  {
+    id: 'common-titles-konran',
+    category: 'titles',
+    title: 'Common Titles on Konran',
+    subtitle: 'Ecclesiastical, Civic & Scholastic Ranks',
+    tags: ['Titles', 'Emyssari', 'Magystrate', 'Dyosan', 'Protectorate', 'Grand Warden', 'Retcod', 'Keeper'],
+    content: `Hierarchy and designated titles recognized across all Providences:
+- Emyssari: Demigod child of two of The Nyne. Supreme leader of their Declared parents' Church & Clergy on Konran.
+- Magystrate: A divine Inquisitor empowered by one of The Nyne to investigate heresy and prime law breaches.
+- Dyosan: An elected mortal leader of a Church & Clergy.
+- Protectorate: The democratically or canonically elected civic leader of an entire Providence.
+- Grand Warden: Head of Security & Peace of a Providence, commanding regional garrisons.
+- Retcod: A recognized scholastic professional of science, medicine, and lifecraft.
+- [___] Keeper: The elite trained knowledge masters of Lyricia and her infinite Library of Ever.
+- Peace Officers: The ubiquitous civic city watch maintaining municipal order in all settlements.`
+  },
+  {
+    id: 'stone-enclave',
+    category: 'factions',
+    title: 'The Stone Enclave (Sororal Protectorate Army)',
+    subtitle: 'Guardian Sisters of Konran',
+    tags: ['Stone Enclave', 'Celeste', 'Military', 'Sororal Army', 'Statues'],
+    content: `The protectorate military of Konran. A Sororal Army founded and trained by Celeste, composed of women recruited from all Providences. Battalions rotate continually across active, passive, and auxiliary tours. All major cities are adorned with colossal, silent stone statues of great size and number—sisters resting in stasis, sleeping until summoned to protect the realm.`
+  },
+  {
+    id: 'konran-astronomy-calendar',
+    category: 'world',
+    title: 'Konran Planetary Measures & Calendar',
+    subtitle: 'Temporal Mechanics of the 3rd Age',
+    tags: ['Calendar', 'Ages', 'Time', 'Year', 'Moons', 'Era of Magic'],
+    content: `Fundamental cosmic cycles of Konran:
+- Year: 324 days, divided into 9 months of 36 days each.
+- Weeks: 9-day weeks governed by liturgical cycles.
+- Day Length: 36 hours long, with an 18-hour day and 18-hour night cycle. This grants all inhabitants generous spans for both leisure and high productivity.
+- Epoch: Year 2,483 of the 3rd Age (The Age of The Arcane, proclaimed the "Era of Magic" during Original Harmony).
+- Moons: 2 natural satellites—The Lyrisphere (Olysphere) and Ayanath.
+- Demographics: 7 continents, 11 major capital cities, and 1.6 billion sentient beings.`
   }
 ];
