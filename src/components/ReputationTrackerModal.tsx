@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Shield, 
   X, 
@@ -6,16 +6,24 @@ import {
   Landmark, 
   Flame, 
   Eye, 
-  BadgeAlert, 
-  ChevronRight, 
-  Plus, 
-  Minus,
   Sparkles,
   Lock,
-  KeyRound
+  KeyRound,
+  RotateCcw,
+  ScrollText
 } from 'lucide-react';
 import { useCharacter } from '../context/CharacterContext';
 import { REPUTATION_ENTITIES, REPUTATION_TIERS } from '../data/reputationEntities';
+import {
+  loadPrestigeLedger,
+  adjustEntityStanding,
+  applyMonthlyStandingDrift,
+  evaluatePrestigeClearance,
+  formatPrestigeStanding,
+  resolvePrestigeEntityId,
+  PRESTIGE_ENTITIES,
+  PrestigeLedgerState,
+} from '../utils/prestige';
 import { playKeyClick, playOptionSelect } from '../utils/audio';
 
 interface ReputationTrackerModalProps {
@@ -34,6 +42,13 @@ export const ReputationTrackerModal: React.FC<ReputationTrackerModalProps> = ({
   const { account, activeCharacter, setReputationScore } = useCharacter();
   const [selectedCategory, setSelectedCategory] = useState<EntityCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [prestigeLedger, setPrestigeLedger] = useState<PrestigeLedgerState>(() => loadPrestigeLedger());
+
+  useEffect(() => {
+    if (isOpen) {
+      setPrestigeLedger(loadPrestigeLedger());
+    }
+  }, [isOpen]);
 
   if (!isOpen || !activeCharacter) return null;
 
@@ -46,11 +61,23 @@ export const ReputationTrackerModal: React.FC<ReputationTrackerModalProps> = ({
     return matchesCategory && matchesSearch;
   });
 
-  const handleAdjustReputation = (entityId: string, currentScore: number, delta: number) => {
-    if (!isDM) return;
+  const handleStepStanding = (entityId: string, entityName: string, delta: number) => {
     playKeyClick();
-    const nextScore = Math.max(-3, Math.min(3, currentScore + delta));
-    setReputationScore(activeCharacter.id, entityId, nextScore);
+    const res = adjustEntityStanding(
+      entityId,
+      delta,
+      `${activeCharacter.name}: ${delta > 0 ? '+' : ''}${delta.toFixed(2)} standing with ${entityName}`
+    );
+    setPrestigeLedger(res.ledger);
+    // Keep legacy -3..+3 score synchronized for character sheet compatibility
+    const mappedLegacy = Math.max(-3, Math.min(3, Math.round(res.record.prestige + res.record.standing / 50)));
+    setReputationScore(activeCharacter.id, entityId, mappedLegacy);
+  };
+
+  const handleMonthlyDrift = () => {
+    playOptionSelect();
+    const next = applyMonthlyStandingDrift(0.5);
+    setPrestigeLedger(next);
   };
 
   const getCategoryIcon = (category: string) => {
@@ -110,7 +137,7 @@ export const ReputationTrackerModal: React.FC<ReputationTrackerModalProps> = ({
           </button>
         </div>
 
-        {/* Category Filter & Search Bar */}
+        {/* Category Filter, Monthly Drift Trigger & Search Bar */}
         <div className="px-5 py-3 border-b border-[#ffcc00]/20 bg-black/40 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-1.5 flex-wrap w-full sm:w-auto">
             {(['all', 'providence', 'church', 'syndicate', 'law_enforcement'] as EntityCategory[]).map(cat => (
@@ -129,6 +156,14 @@ export const ReputationTrackerModal: React.FC<ReputationTrackerModalProps> = ({
                 {cat === 'all' ? 'All Standings' : cat.replace('_', ' ')}
               </button>
             ))}
+            <button
+              onClick={handleMonthlyDrift}
+              title="Apply ±0.50 Konran Monthly Standing Drift toward 0.00 (High-Insight NPCs still remember deeds)"
+              className="px-2.5 py-1 rounded-xs text-[10px] font-mono uppercase tracking-wider bg-purple-950/70 hover:bg-purple-900 text-purple-200 border border-purple-500/50 flex items-center gap-1 cursor-pointer"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Monthly Drift (±0.50)
+            </button>
           </div>
 
           <input
@@ -147,7 +182,7 @@ export const ReputationTrackerModal: React.FC<ReputationTrackerModalProps> = ({
             <div className="p-3 bg-purple-950/30 border border-purple-500/40 rounded-sm">
               <div className="text-xs font-mono text-purple-300 font-bold uppercase tracking-wider flex items-center gap-1.5 mb-2">
                 <Award className="w-4 h-4 text-purple-400" />
-                Special Imperial Endorsements & Citations ({activeCharacter.endorsements.length})
+                Special Imperial Endorsements &amp; Citations ({activeCharacter.endorsements.length})
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {activeCharacter.endorsements.map((end) => (
@@ -165,6 +200,26 @@ export const ReputationTrackerModal: React.FC<ReputationTrackerModalProps> = ({
             </div>
           )}
 
+          {/* High-Insight "In The Know" NPC Remembered Deeds Log */}
+          {prestigeLedger.rememberedDeeds.length > 0 && (
+            <div className="p-3 bg-emerald-950/20 border border-emerald-500/30 rounded-sm">
+              <div className="text-[10px] font-mono text-emerald-300 font-bold uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
+                <ScrollText className="w-3.5 h-3.5 text-emerald-400" />
+                High-Insight / &quot;In The Know&quot; NPC Memory Ledger (Immune to Monthly Drift)
+              </div>
+              <div className="space-y-1 max-h-24 overflow-y-auto text-[11px] font-mono">
+                {prestigeLedger.rememberedDeeds.slice(0, 4).map((deed) => (
+                  <div key={deed.id} className="flex items-center justify-between text-stone-300 bg-black/40 px-2 py-1 rounded">
+                    <span className="truncate">{deed.rumorNote}</span>
+                    <span className="text-[10px] text-[#ffcc00] shrink-0 ml-2">
+                      P{deed.prestigeAfter} ({deed.standingAfter >= 0 ? '+' : ''}{deed.standingAfter.toFixed(2)})
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {filteredEntities.length === 0 ? (
             <div className="py-12 text-center text-sm font-mono text-[#ded7f0]/60">
               No political entities match your search parameters.
@@ -173,6 +228,17 @@ export const ReputationTrackerModal: React.FC<ReputationTrackerModalProps> = ({
             filteredEntities.map((entity) => {
               const score = activeCharacter.reputation?.[entity.id] ?? 0;
               const tierInfo = REPUTATION_TIERS[score] || REPUTATION_TIERS[0];
+              const canonicalId = resolvePrestigeEntityId(entity.id);
+              const prestigeRec = prestigeLedger.records[canonicalId] || {
+                entityId: canonicalId,
+                standing: score * 25,
+                prestige: Math.max(0, score),
+                peakPrestige: Math.max(0, score),
+                lastUpdated: '',
+              };
+              const clearance = evaluatePrestigeClearance(canonicalId, 1, 0);
+              const prestigeDef = PRESTIGE_ENTITIES.find((p) => p.id === canonicalId);
+              const standingPct = Math.max(0, Math.min(100, ((prestigeRec.standing + 100) / 200) * 100));
 
               return (
                 <div
@@ -185,10 +251,13 @@ export const ReputationTrackerModal: React.FC<ReputationTrackerModalProps> = ({
                         {getCategoryIcon(entity.category)}
                       </div>
                       <div>
-                        <div className="text-sm font-bold text-white flex items-center gap-2">
+                        <div className="text-sm font-bold text-white flex flex-wrap items-center gap-2">
                           <span>{entity.name}</span>
                           <span className="text-[10px] font-mono uppercase px-1.5 py-0.2 rounded bg-black/70 text-[#ded7f0]/70 border border-[#ded7f0]/20">
                             {entity.category.replace('_', ' ')}
+                          </span>
+                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-950/80 text-[#ffcc00] border border-[#ffcc00]/50">
+                            {formatPrestigeStanding(prestigeRec)}
                           </span>
                         </div>
                         <p className="text-xs text-[#ded7f0]/80 font-sans mt-0.5">
@@ -197,38 +266,71 @@ export const ReputationTrackerModal: React.FC<ReputationTrackerModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Standing Badge and DM Controls */}
-                    <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
-                      <span className={`px-2.5 py-1 rounded text-xs font-mono font-bold uppercase border ${tierInfo.badgeClass}`}>
-                        {tierInfo.label} ({score > 0 ? `+${score}` : score})
+                    {/* One-Tap Reputation Steppers (-0.50 / -0.25 / +0.25 / +0.50) */}
+                    <div className="flex flex-wrap items-center gap-1.5 self-start sm:self-center shrink-0">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase border ${tierInfo.badgeClass}`}>
+                        {tierInfo.label}
                       </span>
-
-                      {/* DM Adjustment Controls */}
-                      {isDM && (
-                        <div className="flex items-center gap-1 bg-black/80 border border-purple-500/50 p-1 rounded">
+                      <div className="flex items-center gap-1 bg-black/80 border border-purple-500/50 p-1 rounded font-mono text-[10px]">
+                        {([-0.5, -0.25, 0.25, 0.5] as const).map((step) => (
                           <button
-                            onClick={() => handleAdjustReputation(entity.id, score, -1)}
-                            disabled={score <= -3}
-                            className="w-6 h-6 flex items-center justify-center rounded bg-red-950/80 hover:bg-red-900 text-red-300 disabled:opacity-30 disabled:cursor-not-allowed border border-red-500/50 cursor-pointer"
-                            title="Decrease Standing"
+                            key={step}
+                            onClick={() => handleStepStanding(entity.id, entity.name, step)}
+                            className={`px-1.5 py-0.5 rounded border cursor-pointer transition-colors ${
+                              step < 0
+                                ? 'bg-red-950/70 hover:bg-red-900 text-red-200 border-red-500/40'
+                                : 'bg-emerald-950/70 hover:bg-emerald-900 text-[#39ff14] border-emerald-500/40'
+                            }`}
+                            title={`Step standing ${step > 0 ? `+${step.toFixed(2)}` : step.toFixed(2)} (Rolls over at ±100.00 into Prestige Tier)`}
                           >
-                            <Minus className="w-3.5 h-3.5" />
+                            {step > 0 ? `+${step.toFixed(2)}` : step.toFixed(2)}
                           </button>
-                          <span className="w-6 text-center text-xs font-mono font-bold text-white">
-                            {score}
-                          </span>
-                          <button
-                            onClick={() => handleAdjustReputation(entity.id, score, 1)}
-                            disabled={score >= 3}
-                            className="w-6 h-6 flex items-center justify-center rounded bg-emerald-950/80 hover:bg-emerald-900 text-[#39ff14] disabled:opacity-30 disabled:cursor-not-allowed border border-emerald-500/50 cursor-pointer"
-                            title="Increase Standing"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      )}
+                        ))}
+                      </div>
                     </div>
                   </div>
+
+                  {/* -100.00 to +100.00 Rollover Progress Bar */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[10px] font-mono text-[#ded7f0]/70">
+                      <span>-100.00 (Demotion)</span>
+                      <span className="text-[#ffcc00] font-bold">
+                        Standing: {prestigeRec.standing >= 0 ? `+${prestigeRec.standing.toFixed(2)}` : prestigeRec.standing.toFixed(2)} / 100.00 → Prestige {prestigeRec.prestige + 1}
+                      </span>
+                      <span>+100.00 (Prestige Rollover)</span>
+                    </div>
+                    <div className="relative w-full h-2 bg-black/90 rounded-full overflow-hidden border border-[#ffcc00]/30">
+                      <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-white/40 z-10" />
+                      <div
+                        className="h-full bg-gradient-to-r from-red-600 via-[#ffcc00] to-[#39ff14] transition-all duration-300"
+                        style={{ width: `${standingPct}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Internal Sect Invitations & Dynamic Revocation Status */}
+                  {prestigeDef && prestigeDef.sects.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      {prestigeDef.sects.map((sect) => {
+                        const isUnlocked = clearance.unlockedSects.includes(sect.name);
+                        return (
+                          <span
+                            key={sect.name}
+                            title={`${sect.description} (Requires Prestige ${sect.minPrestige}, Standing ${sect.minStanding.toFixed(2)})`}
+                            className={`px-2 py-0.5 rounded text-[10px] font-mono flex items-center gap-1 border ${
+                              isUnlocked
+                                ? 'bg-emerald-950/70 text-[#39ff14] border-emerald-400/60'
+                                : 'bg-black/60 text-stone-500 border-stone-700/60'
+                            }`}
+                          >
+                            {isUnlocked ? <Sparkles className="w-2.5 h-2.5" /> : <Lock className="w-2.5 h-2.5" />}
+                            {sect.name} (P{sect.minPrestige})
+                            {!isUnlocked && <span className="text-[8.5px] text-red-400/80 ml-0.5">[REVOKED]</span>}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
 
                   {/* Standing Detail and Perk Banner */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-2 border-t border-[#ffcc00]/10 text-xs font-mono">
@@ -248,9 +350,9 @@ export const ReputationTrackerModal: React.FC<ReputationTrackerModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-[#ffcc00]/30 bg-black/70 flex items-center justify-between text-xs font-mono text-[#ded7f0]/70 shrink-0">
+        <div className="px-5 py-3 border-t border-[#ffcc00]/30 bg-black/70 flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-[#ded7f0]/70 shrink-0">
           <div>
-            Total Entities Monitored: <strong className="text-[#ffcc00]">{REPUTATION_ENTITIES.length}</strong>
+            Entities Monitored: <strong className="text-[#ffcc00]">{REPUTATION_ENTITIES.length}</strong> · Rollover: <strong className="text-[#39ff14]">±100.00 → Prestige Tier</strong>
           </div>
           <button
             onClick={() => {

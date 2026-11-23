@@ -127,34 +127,44 @@ When answering user queries or generating content, adhere strictly to these cano
   4. **Unycorn:** Arts, Performance & Diplomacy.
 * *Note:* Legacy names (Pyros, Umbra, Aethelgard, Thalassa, Astralis, Bellona, Paradox, Duath) are obsolete and forbidden.
 
-### D. Canonical 3D Solar System (10 Celestial Planes)
-Rendered in Three.js at $z = 18.0$ (`KonranGlobe.tsx`), matching the canon cosmological map:
-1. **Ayan (The Sun):** Blazing white plasma core with yellow/blue filaments and corona flares.
-2. **Kay-Kee (Kayzoku):** Counter-rotating hemispheres (Kay arid mushroom mesas & Kee ocean basin) + 2 moons.
-3. **Synthelavor (Slavyna):** Hyper-volcanic basalt sphere, glowing magma cracks, red planetary rings, diffuse nebula cloud + 5 moons (Tatyon, Odahs, Kark, Syndavaria, Hemalod).
-4. **Lona Uyn (Lyricia):** Azure/emerald garden sphere, floating aerial rock islands, crystal veins, ice-crystal ring + 3 moons (Kelth, Zorm, Sylef).
-5. **Konran (Capital):** Primary mortal sphere ($r < 308\text{px}$ clear) with Gold Sentinel *Olysphere* and Violet Watchtower *Ayanath*.
-6. **Cadence (Celeste / Vevayun):** Classical Greco-Roman marble valleys, emerald forests, amphitheater peaks + violet moon.
-7. **Dyata / Yngolcina (Oray):** Concentric dragon-eye caldera with deep sapphire void core + 2 moons.
-8. **Vaya Marr & Lantyca (Ousava):** Giant oceanic sphere, giant rainforest moon *Lantyca*, permanent waterspouts + 2 moons.
-9. **Duathyer (Psyon):** Obsidian spires, pale violet toxic mists, fractured acid craters + 1 moon.
-10. **Kestok / Keztox (Krayvuk):** Biomechanical neural battle station, yellow acid trench, green Kes atmosphere, purple Tox obsidian spires + 1 orbital station.
-* **Interactive Celestial Raycasting:** Clicking on any planet or moon launches an in-universe Slablet lore reader for that world.
+### D. Canonical 3D Solar System, Smart Globes & Screensaver Mode
+Rendered in Three.js at $z = 18.0$ (`KonranGlobe.tsx`), driven by `useCelestialClock()` (`src/hooks/useCelestialClock.ts`) as the single source of truth for time across the top-bar mini clock, the rigid `1:1` circular `GrandChronometronModal.tsx` (`240px × 240px` mobile / `280px × 280px` desktop), and 3D orbital mechanics:
+* **Performance-Optimized Focus LOD:** Only the focused planet renders full high-res procedural shaders, day/night terminator, emissive night city lights, weather clouds, and moons; unfocused planes use lightweight proxy meshes except for the canonical landmarks:
+  1. **Ayan (The Sun):** Blazing white plasma core with yellow/blue filaments and corona flares.
+  2. **Kay-Kee (Kayzoku):** Counter-rotating hemispheres (Kay arid mushroom cap clockwise & Kee ocean basin counterclockwise) aligning for **The Passing** + 2 moons.
+  3. **Synthelavor (Slavyna):** Hyper-volcanic basalt sphere, glowing magma cracks, glittering red dust rings, diffuse nebula cloud + 5 moons (Tatyon, Odahs, Kark, Syndavaria, Hemalod).
+  4. **Lona Uyn (Lyricia):** Azure/emerald garden sphere, floating aerial rock islands, crystal veins, ring halo + 3 moons (Kelth, Zorm, Sylef).
+  5. **Konran (Capital):** Primary mortal sphere ($r < 308\text{px}$ clear) with 36h day/night solar terminator, emissive night city lights (*Vantya*, *Padd City*, *Crafton Cove*, *Skreeton Harbor*), live animated weather cloud sphere, Gold Sentinel *Olysphere* and Violet Watchtower *Ayanath*.
+  6. **Cadence (Celeste / Vevayun):** Classical Greco-Roman marble valleys, emerald forests, amphitheater peaks + violet moon.
+  7. **Dyata / Yngolcina (Oray):** Concentric dragon-eye caldera with deep sapphire void core + 2 moons.
+  8. **Vaya Marr & Lantyca (Ousava):** Giant oceanic sphere, giant rainforest moon *Lantyca*, animated sky-waterspout bridge during close tidal pass + 2 moons.
+  9. **Duathyer (Psyon):** Obsidian spires, pale violet toxic mists, fractured acid craters + 1 moon.
+  10. **Kestok / Keztox (Krayvuk) & The Singularity Eye:** Biomechanical two-lobed battle station split by a glowing yellow acid equator trench (**Kes** green/yellow toxic left lobe; **Tox** purple steel clockwork right lobe), accompanied by **Krayvuk's high-definition Singularity Eyeball** that visibly watches Konran and detects when Keztox eclipses its line of sight (*Keztox Blind-Spot Festival*).
+* **Screensaver / Attract Mode:** Slow cinematic orbital camera drift around the lit day/night planet and moons.
 
-### E. LegendKeeper v3 Two-Pass Sub-Map Crawler & 3D Globe Pins
-* **Edge Proxy:** `functions/api/lore/legendkeeper.ts` performs a two-pass recursive crawl on the Konran world map:
-  * *Pass 1:* Fetches the root Konran map document and extracts all top-level province pins (`tier: "province"`).
-  * *Pass 2:* Inspects linked child map tabs (e.g. Kray Providence) and extracts nested settlement pins (`tier: "city"`), such as *Crafton Cove*, *Creston Cove*, *Padd City*, *Vantya*, *Skreeton Harbor*, *Crescent Moon Harbor*, *K.A.M.P. Academy Citadel*, *Sunfire Observatory*, *Titan's Trench*.
-* **3D Spherical Projection:** Translates 2D map coordinates to 3D surface vectors on the Three.js Konran sphere using calibrated continent bounding boxes.
-* **Horizon Culling:** Dynamically culls pins on the rear hemisphere (`dot(cameraDir, pinNormal) < 0.15`) so pins never show through solid terrain.
-* **Zoom LOD:** Automatically switches pin visibility between macro province markers in orbit and granular settlement icons when zoomed into the surface.
-* **Interactive Pin Raycasting:** Clicking a pin opens a floating glassmorphism terminal with full LegendKeeper markdown wiki content.
+### E. Recursive "Google Earth" LegendKeeper v3 Crawler & 3D Map Projection
+* **Edge Proxy (`functions/api/lore/legendkeeper.ts` & `functions/api/lore/article/[resourceId].ts`):**
+  * Recursively crawls `kind: "map"` document tabs across arbitrary zoom depths: Tier 0 (Solar System) → Tier 1 (Planetary Globe `Konran`) → Tier 2 (Continent/Region `Kray Providence`) → Tier 3 (City `Crafton Cove`, `Vantya`, `Padd City`) → Tier 4+ (District / Street / Building Interior e.g. `The Mydnight Rendezvous`).
+  * Pins whose target LK resource contains a `kind: "map"` tab render a pulsing **sub-map portal reticle** on the 3D globe and interactive sub-map portal buttons inside `LoreAtlasModal.tsx`.
+  * Caches normalized map trees and article dossiers in Cloudflare Cache / KV (`LORE_CACHE`) and gracefully falls back to canonical multi-tier data with HTTP 200 if offline.
+* **3D Spherical Projection & Horizon Culling:** Projects nested Tier 2+ coordinates via continent bounding boxes (`CONTINENT_BOUNDING_BOXES` with parent-anchor offset fallback), culls far-hemisphere pins (`dot(cameraDir, pinNormal) < 0`), and smoothly reveals city/district pins as Spyglass zooms toward the surface.
 
-### F. Fullscreen PWA & Standalone APK Install
-* **Manifest & Service Worker:** `public/manifest.webmanifest` configured with `"display": "standalone"`, `"display_override": ["fullscreen", "standalone", "minimal-ui"]`, `#09090b` theme/background colors.
-* **Service Worker:** `public/sw.js` caches critical assets for offline instant cold-start.
-* **Installation Hooks:** `src/hooks/usePWAInstall.ts` captures `beforeinstallprompt` on Android/Chrome and provides iOS Safari "Share → Add to Home Screen" instructions.
-* **Dedicated In-App Triggers:** Native "Install Slablet App (Fullscreen)" cards inside `ColdStartIgnition.tsx` and `OSCalibrationPanel.tsx`.
+### F. Fullscreen PWA, Two-Tier Offline Vault & Aether-Wave Radio
+* **Manifest & Service Worker:** `public/manifest.webmanifest` (`"display": "standalone"`, `"display_override": ["fullscreen", "standalone", "minimal-ui"]`, `#09090b`) and `public/sw.js` with install triggers in `ColdStartIgnition.tsx` and `OSCalibrationPanel.tsx`.
+* **Two-Tier Offline Storage Separation (`src/utils/vault.ts` & `src/components/StorageVaultPanel.tsx`):**
+  * **Protected Local User Vault (`konran.vault.*`):** Character sheet, inventory, Resonance dice, User Home (Layer 3) palette, murder-board layout, Prestige ledger, and wheel calibration — never wiped by media cache clears, with an offline dirty-flag sync queue (`enqueueVaultSync`, `flushVaultSyncQueue`).
+  * **Clearable Media/Lore Cache (`konran.cache.*` & Cache Storage):** Clears cached lore & map assets with explicit confirmation (*"Clears cached lore & map assets; your character sheet and local OS data remain safe"*).
+* **"Aether-Wave Radio" Miniplayer (`src/components/AetherWaveRadio.tsx`):**
+  * Glowing Nixie tubes (`CH-01`..`CH-09`, `TRK-01`), live animated phosphor oscilloscope `<canvas>`, curated YouTube Music playlist selector + custom playlist ID input, YouTube IFrame Player API transport controls (`loadPlaylist`, `playVideo`, `pauseVideo`, `nextVideo`, `previousVideo`) with procedural Web Audio synth ambient fallback, collapsible into a top-right corner Nixie badge.
+
+### G. Discord GM Switchboard, Revocable Prestige Clearance (`-100` to `+100` Rollover) & Layer Apps
+* **Revocable Prestige Clearance Engine (`src/utils/prestige.ts` & `ReputationTrackerModal.tsx`):**
+  * Tracks standing from `-100.00` to `+100.00` (`0.00` baseline) in `0.25` / `0.50` steps, rolling over at `+100.00` into **Prestige 1, 2, 3, 4+** (`0.00` on the new tier) with monthly `±0.50` drift and an "In The Know" high-Insight NPC memory log.
+  * Dynamically evaluates and revokes internal sect invitations (*Brotherhood of Blood*, *School of Shadows*, *Sage Pryestesshood*, *Agents of the Arrow* at Prestige 3–4+).
+* **Discord GM Switchboard (`src/components/GMSwitchboardView.tsx`, `functions/api/gm/action.ts`, `functions/api/gm/feed.ts`, `src/hooks/useGMFeed.ts`):**
+  * Campaign & LegendKeeper handout dropper (Public Broadcast vs. Targeted Drop on a `3–8s` background sync pulse), one-tap `[-0.50] [-0.25] [+0.25] [+0.50]` reputation steppers posting rumors to `The Nyne Net (1)`, and Deity Declaration / K.A.M.P. progression approvals.
+* **Layer `-1` CoreNet ICE Breach Minigames (`src/components/CoreNetBreachMinigameView.tsx`):** Fallout terminal glyph/word matrix, ley-circuit flow routing, and frequency wire-patching scaled to character Intelligence/Arcana.
+* **Layer `1` The Nyne Net Board & Escrow (`src/components/NyneNetBoardEscrowView.tsx`):** Cross-Campaign Message Board (*World Wire* auto-rumors, *Bounties & Contracts*, *Dead Drops / Tavern Notes*) and *Lyricia Courier Escrow* item trading.
 
 ### G. Spatial OS Architecture (Slablet MK IV)
 * **Astrolabe Radial Click-Wheel (`AstrolabeController.tsx`):**

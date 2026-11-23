@@ -24,6 +24,7 @@ import {
 } from '../types/slabletOS';
 import { playKeyClick, playOptionSelect } from '../utils/audio';
 import { usePWAInstall } from '../hooks/usePWAInstall';
+import { StorageVaultPanel } from './StorageVaultPanel';
 
 interface OSCalibrationPanelProps {
   preferences: WheelPreferences;
@@ -337,6 +338,9 @@ export const OSCalibrationPanel: React.FC<OSCalibrationPanelProps> = ({
               )}
             </div>
           </div>
+
+          {/* Two-Tier Offline Storage Separation: Protected User Vault vs Clearable Media/Lore Cache */}
+          <StorageVaultPanel />
 
           {/* Replay Tutorial & Reset Defaults */}
           <div className="pt-2 flex items-center justify-between border-t border-white/10">

@@ -29,7 +29,12 @@ import {
 } from 'lucide-react';
 import { useCharacter } from '../context/CharacterContext';
 import { playKeyClick, playOptionSelect, triggerHaptic, playDetentTick } from '../utils/audio';
-import { getKonranGrandState } from '../utils/celestial';
+import { useCelestialClock } from '../hooks/useCelestialClock';
+import { useGMFeed } from '../hooks/useGMFeed';
+import { AetherWaveRadio } from './AetherWaveRadio';
+import { GMSwitchboardView } from './GMSwitchboardView';
+import { CoreNetBreachMinigameView } from './CoreNetBreachMinigameView';
+import { NyneNetBoardEscrowView } from './NyneNetBoardEscrowView';
 import { KonranGlobe } from './KonranGlobe';
 import { KonranMandalaOverlay } from './KonranMandalaOverlay';
 import { GrandChronometronModal } from './GrandChronometronModal';
@@ -461,6 +466,21 @@ export const SlabletDesktop = ({
 
   // Spyglass Zoom Lock State & Wheel Zoom Scrubbing
   const [isZoomLocked, setIsZoomLocked] = useState(false);
+  const [activeLoreQuery, setActiveLoreQuery] = useState<string>('');
+  const [isScreensaver, setIsScreensaver] = useState<boolean>(false);
+  const [isEyeEclipsed, setIsEyeEclipsed] = useState<boolean>(false);
+
+  // Subscribe to GM Switchboard broadcasts & drops (3-8s background pulse + instant cross-tab broadcast)
+  useGMFeed({
+    characterId: activeCharacter?.id,
+    onEventReceived: (evt) => {
+      if (evt.reputation?.rumorNote) {
+        showSystemNotice(`NYNE NET WIRE // ${evt.reputation.rumorNote.toUpperCase()}`);
+      } else if (evt.handout?.title) {
+        showSystemNotice(`GM SWITCHBOARD // ${evt.handout.title.toUpperCase()}`);
+      }
+    },
+  });
 
   const toggleZoomLock = useCallback(() => {
     setIsZoomLocked((prev) => {
@@ -494,6 +514,7 @@ export const SlabletDesktop = ({
   const handleGlobePinClick = useCallback((pin: GlobePin) => {
     playOptionSelect();
     triggerHaptic(18);
+    setActiveLoreQuery(pin.resourceId || pin.name);
     const windowTitle = `${pin.name} // ${pin.tier.toUpperCase()}`;
     launchWindow('lore-atlas', windowTitle, pin.iconColor || '#38bdf8');
     showSystemNotice(`LORE ARCHIVE // ACCESSED ${pin.name.toUpperCase()}`);
@@ -503,6 +524,7 @@ export const SlabletDesktop = ({
   const handleCelestialBodyClick = useCallback((body: SolarBody) => {
     playOptionSelect();
     triggerHaptic(18);
+    setActiveLoreQuery(body.legendKeeperResourceId || body.name);
     const windowTitle = `${body.name} // CELESTIAL PLANE`;
     launchWindow('lore-atlas', windowTitle, body.color);
     showSystemNotice(`CELESTIAL RADAR // LOCK-ON ${body.name.toUpperCase()}`);
@@ -608,8 +630,8 @@ export const SlabletDesktop = ({
     }
   }, [wheelPreferences, launchWindow, showSystemNotice, syncToLedgerSheet, cascadeWindows, cycleZTier]);
 
-  const celestialState = getKonranGrandState(now);
-  const { hourAngle, minuteAngle, secondAngle, isNightwatch, timeString, liturgicalDay } = celestialState;
+  const { state: celestialState } = useCelestialClock();
+  const { hourAngle, minuteAngle, timeString, liturgicalDay } = celestialState;
 
   // Layer-Scoped Persistent Windows (Only show windows belonging to current layer elevation)
   const openWindows = useMemo(() => {
@@ -914,7 +936,18 @@ export const SlabletDesktop = ({
 
           <KonranGlobe 
             zTier={zTier}
+            screensaver={isScreensaver}
+            onEyeEclipseChange={(eclipsed) => {
+              setIsEyeEclipsed(eclipsed);
+              if (eclipsed) {
+                showSystemNotice('CELESTIAL EVENT // KEZTOX BLIND-SPOT ECLIPSE OF KRAYVUK’S SINGULARITY EYE');
+              }
+            }}
             onGlobeClick={() => {
+              if (isScreensaver) {
+                setIsScreensaver(false);
+                return;
+              }
               playOptionSelect();
               cycleZTier();
             }}
@@ -954,29 +987,61 @@ export const SlabletDesktop = ({
         </div>
 
         {/* Quick Launch Action Pills at Corners of Planet for High-Speed Docking */}
-        <div className="absolute top-4 left-6 z-10 flex gap-2">
+        {!isScreensaver && (
+          <div className="absolute top-4 left-6 z-10 flex flex-wrap gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                launchWindow('custom', 'Custom Field Terminal', '#39ff14');
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-black/70 border border-[#39ff14]/40 hover:border-[#39ff14] text-[#39ff14] text-xs font-mono shadow-[0_0_12px_rgba(57,255,20,0.15)] hover:scale-105 transition-all cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>+ New Terminal Node</span>
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                cascadeWindows();
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-black/70 border border-white/20 hover:border-white/50 text-white/80 text-xs font-mono transition-all cursor-pointer"
+              title="Cascade All Open Screens"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Cascade</span>
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                playOptionSelect();
+                setIsScreensaver(true);
+                showSystemNotice('ATTRACT MODE // ORBITAL SCREENSAVER DRIFT ENGAGED (TAP GLOBE TO WAKE)');
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-black/70 border border-[#38bdf8]/40 hover:border-[#38bdf8] text-[#38bdf8] text-xs font-mono transition-all cursor-pointer"
+              title="Engage Screensaver / Attract Orbital Drift Mode"
+            >
+              <Orbit className="w-3.5 h-3.5" />
+              <span>Attract</span>
+            </button>
+            {isEyeEclipsed && (
+              <span className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-purple-950/90 border border-[#c084fc] text-[#c084fc] text-[10px] font-mono animate-pulse">
+                <Eye className="w-3.5 h-3.5" />
+                <span>KEZTOX BLIND-SPOT FESTIVAL</span>
+              </span>
+            )}
+          </div>
+        )}
+        {isScreensaver && (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              launchWindow('custom', 'Custom Field Terminal', '#39ff14');
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-black/70 border border-[#39ff14]/40 hover:border-[#39ff14] text-[#39ff14] text-xs font-mono shadow-[0_0_12px_rgba(57,255,20,0.15)] hover:scale-105 transition-all cursor-pointer"
+            onClick={() => setIsScreensaver(false)}
+            className="absolute top-4 left-6 z-40 px-3 py-1.5 rounded bg-black/80 border border-[#ffd700]/60 text-[#ffd700] text-xs font-mono cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>+ New Terminal Node</span>
+            Exit Orbital Screensaver
           </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              cascadeWindows();
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-black/70 border border-white/20 hover:border-white/50 text-white/80 text-xs font-mono transition-all cursor-pointer"
-            title="Cascade All Open Screens"
-          >
-            <LayoutGrid className="w-3.5 h-3.5" />
-            <span>Cascade</span>
-          </button>
-        </div>
+        )}
+
+        {/* Aether-Wave Field Radio Miniplayer (Nixie Tubes + Phosphor Oscilloscope, Top-Right Dock) */}
+        {!isScreensaver && <AetherWaveRadio defaultCollapsed={true} />}
 
         {/* Layer -1: CoreNet Deep Plum & Glowing Gold Matrix Overlay */}
         <CoreNetMatrixOverlay 
@@ -1098,7 +1163,12 @@ export const SlabletDesktop = ({
 
             {win.type === 'lore-atlas' && (
               <div className="w-full h-full p-2 bg-[#0c0804] overflow-y-auto">
-                <LoreAtlasModal isOpen={true} onClose={() => closeWindow(win.id)} isEmbedded={true} />
+                <LoreAtlasModal
+                  isOpen={true}
+                  onClose={() => closeWindow(win.id)}
+                  initialQuery={activeLoreQuery}
+                  isEmbedded={true}
+                />
               </div>
             )}
 
@@ -1194,6 +1264,12 @@ export const SlabletDesktop = ({
                   onReplayTutorial={() => setIsTutorialOpen(true)}
                   onClose={() => closeWindow(win.id)}
                 />
+              ) : win.customData?.terminalName === 'CoreNet Matrix // Hacking & ICE Breach' ? (
+                <CoreNetBreachMinigameView />
+              ) : win.customData?.terminalName === 'The Nyne Net // World Wire & Lyricia Escrow' ? (
+                <NyneNetBoardEscrowView />
+              ) : win.customData?.terminalName === 'Discord GM Switchboard & Prestige Control' ? (
+                <GMSwitchboardView onClose={() => closeWindow(win.id)} />
               ) : (
                 <CustomTerminalView
                   window={win}

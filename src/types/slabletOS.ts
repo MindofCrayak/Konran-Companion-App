@@ -66,7 +66,8 @@ export interface SolarBodyMoon {
 export interface GlobePin {
   id: string;
   name: string;
-  tier: 'province' | 'city' | 'landmark';
+  tier: 'province' | 'city' | 'landmark' | 'district';
+  tierLevel?: number; // 1=Planetary Province, 2=Region, 3=City, 4+=District/Interior
   parentId?: string;
   parentResourceId?: string;
   resourceId?: string;
@@ -77,6 +78,8 @@ export interface GlobePin {
   iconColor?: string;
   articleUrl?: string;
   isCapital?: boolean;
+  hasSubMap?: boolean; // Signals sub-map portal reticle for recursive diving
+  children?: GlobePin[];
 }
 
 export interface SolarBody {
