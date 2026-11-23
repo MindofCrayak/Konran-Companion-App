@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Shield,
   Heart,
@@ -13,6 +13,9 @@ import {
   Radio,
   Cpu,
   Download,
+  Upload,
+  CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 import { useCharacter } from '../context/CharacterContext';
 import { InventoryItem, CharacterSheetStats } from '../types';
@@ -20,6 +23,8 @@ import { DEITIES } from '../data/deities';
 import { playKeyClick, playOptionSelect, playDivineReveal } from '../utils/audio';
 import { ExportCharacterModal } from './ExportCharacterModal';
 import { CharacterExportPayload } from '../types/feExport';
+import { parseImportedCharacterFile, exportSlabletCharacterJson } from '../utils/characterImporter';
+import { saveToVault, enqueueVaultSync } from '../utils/vault';
 
 const DEFAULT_STATS: CharacterSheetStats = {
   str: 10,
@@ -200,6 +205,8 @@ export const CharacterSheetView: React.FC = () => {
   const [newItemCategory, setNewItemCategory] = useState<InventoryItem['category']>('Magitech');
   const [newItemQty, setNewItemQty] = useState(1);
   const [newItemDesc, setNewItemDesc] = useState('');
+  const [importFeedback, setImportFeedback] = useState<{ ok: boolean; message: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   if (!activeCharacter) {
     return (
@@ -253,6 +260,40 @@ export const CharacterSheetView: React.FC = () => {
     updateCharacter(activeCharacter.id, {
       inventory: inventory.filter((i) => i.id !== id),
     });
+  };
+
+  const handleImportFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const content = typeof reader.result === 'string' ? reader.result : '';
+      const result = parseImportedCharacterFile(content, file.name);
+      if (!result.ok || !result.updates) {
+        playKeyClick();
+        setImportFeedback({
+          ok: false,
+          message: result.error || `Failed to import ${file.name}.`,
+        });
+      } else {
+        playDivineReveal();
+        updateCharacter(activeCharacter.id, result.updates);
+        saveToVault(`character.${activeCharacter.id}`, { ...activeCharacter, ...result.updates });
+        enqueueVaultSync('character_import', { characterId: activeCharacter.id, format: result.format, updates: result.updates });
+        setImportFeedback({
+          ok: true,
+          message: result.summary || `Successfully imported ${file.name}.`,
+        });
+      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+    reader.onerror = () => {
+      setImportFeedback({
+        ok: false,
+        message: `Import failed (${file.name}): Browser FileReader could not read the uploaded file.`,
+      });
+    };
+    reader.readAsText(file);
   };
 
   const clergyMessages = getClergyMessagesForDeity(activeCharacter.declaredDeity);
@@ -344,12 +385,48 @@ export const CharacterSheetView: React.FC = () => {
             <span>Field Journal</span>
           </button>
 
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json,.xml,.txt"
+            onChange={handleImportFileChange}
+            className="hidden"
+          />
+
+          <button
+            onClick={() => {
+              playOptionSelect();
+              fileInputRef.current?.click();
+            }}
+            className="px-2.5 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-[#39ff14] border border-emerald-400/60 flex items-center gap-1 font-mono text-[11px] font-bold cursor-pointer transition-all ml-1"
+            title="Import Slablet JSON, Walter Kammerer 5e XML/JSON, or D&D Beyond / 5e.tools JSON"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            <span>Import JSON/XML</span>
+          </button>
+
+          <button
+            onClick={() => {
+              playOptionSelect();
+              exportSlabletCharacterJson(activeCharacter);
+              setImportFeedback({
+                ok: true,
+                message: `Exported native Slablet JSON for "${activeCharacter.name}" (100% round-trip compatible).`,
+              });
+            }}
+            className="px-2 py-1 rounded bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-400/60 flex items-center gap-1 font-mono text-[11px] font-bold cursor-pointer transition-all"
+            title="Download native Slablet JSON backup for 100% round-trip import"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Slablet JSON</span>
+          </button>
+
           <button
             onClick={() => {
               playOptionSelect();
               setShowExportModal(true);
             }}
-            className="px-2.5 py-1 rounded bg-[#ffd700]/15 hover:bg-[#ffd700]/25 text-[#ffd700] border border-[#ffd700]/60 flex items-center gap-1.5 font-mono text-[11px] font-bold shadow-[0_0_10px_rgba(255,215,0,0.2)] cursor-pointer transition-all ml-1"
+            className="px-2.5 py-1 rounded bg-[#ffd700]/15 hover:bg-[#ffd700]/25 text-[#ffd700] border border-[#ffd700]/60 flex items-center gap-1.5 font-mono text-[11px] font-bold shadow-[0_0_10px_rgba(255,215,0,0.2)] cursor-pointer transition-all"
             title="Export character for mobile Fifth Edition Character Sheet (Walter Kammerer)"
           >
             <Download className="w-3.5 h-3.5" />
@@ -357,6 +434,33 @@ export const CharacterSheetView: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Inline Character Import / Export Validation Banner (Task T-013) */}
+      {importFeedback && (
+        <div
+          className={`mx-4 mt-3 px-3 py-2 rounded border font-mono text-xs flex items-center justify-between gap-2 ${
+            importFeedback.ok
+              ? 'bg-emerald-950/80 border-[#39ff14] text-[#39ff14]'
+              : 'bg-red-950/85 border-red-400 text-red-200'
+          }`}
+          role="alert"
+        >
+          <div className="flex items-center gap-2">
+            {importFeedback.ok ? (
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-[#39ff14]" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 shrink-0 text-red-400" />
+            )}
+            <span>{importFeedback.message}</span>
+          </div>
+          <button
+            onClick={() => setImportFeedback(null)}
+            className="text-[10px] underline opacity-80 hover:opacity-100 cursor-pointer shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">

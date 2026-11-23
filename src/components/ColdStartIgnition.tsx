@@ -93,8 +93,8 @@ export const ColdStartIgnition: React.FC<ColdStartIgnitionProps> = ({
         </div>
       </div>
 
-      {/* Central Gold Port & 42mm Fated Badge Assembly */}
-      <div className="relative flex items-center justify-center w-72 h-72 sm:w-80 sm:h-80">
+      {/* Central Gold Port & 42mm Fated Badge Assembly — Locked 1:1 Concentric Origin */}
+      <div className="relative flex items-center justify-center w-72 h-72 sm:w-80 sm:h-80 aspect-square flex-shrink-0">
         {/* Volumetric Hard-Light Hologram Rings (Phase 3) */}
         {phase === 3 && (
           <>
@@ -116,8 +116,9 @@ export const ColdStartIgnition: React.FC<ColdStartIgnitionProps> = ({
         <img
           src="/assets/konran/crests/misc/gold_port_receiver.png"
           alt="Gold Port Receiver Well"
-          className="absolute inset-0 w-full h-full object-contain pointer-events-none transition-all duration-700 z-10"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full aspect-square object-contain pointer-events-none transition-all duration-700 z-10 rounded-full"
           style={{
+            clipPath: 'circle(49% at 50% 50%)',
             filter:
               phase === 0
                 ? 'brightness(0.55) contrast(1.1) drop-shadow(0 0 18px rgba(212,175,55,0.25))'
@@ -130,8 +131,11 @@ export const ColdStartIgnition: React.FC<ColdStartIgnitionProps> = ({
         <img
           src="/assets/konran/crests/misc/nyne_petal_lotus.png"
           alt="Nyne-Petal Lotus"
-          className="absolute w-[66%] h-[66%] object-contain pointer-events-none transition-opacity duration-700 z-15"
-          style={{ opacity: phase >= 1 ? 0.92 : 0.35 }}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[66%] h-[66%] aspect-square object-contain pointer-events-none transition-opacity duration-700 z-15 rounded-full"
+          style={{
+            opacity: phase >= 1 ? 0.92 : 0.35,
+            clipPath: 'circle(49% at 50% 50%)',
+          }}
           draggable={false}
         />
 
@@ -139,10 +143,12 @@ export const ColdStartIgnition: React.FC<ColdStartIgnitionProps> = ({
         <img
           src="/assets/konran/crests/misc/astrolabe_chapter_ring.png"
           alt="Astrolabe Nonary Bezel"
-          className="absolute w-[92%] h-[92%] object-contain pointer-events-none transition-all duration-1000 ease-out z-20"
+          className="absolute top-1/2 left-1/2 w-[92%] h-[92%] aspect-square object-contain pointer-events-none transition-all duration-1000 ease-out z-20 rounded-full"
           style={{
             opacity: phase >= 1 ? 1 : 0.25,
-            transform: `rotate(${ringAngle}deg)`,
+            transform: `translate(-50%, -50%) rotate(${ringAngle}deg)`,
+            transformOrigin: '50% 50%',
+            clipPath: 'circle(49% at 50% 50%)',
           }}
           draggable={false}
         />
@@ -163,28 +169,41 @@ export const ColdStartIgnition: React.FC<ColdStartIgnitionProps> = ({
           </span>
         </div>
 
-        {/* 3 & 4. Stone + Church Bezel 3D Flipper (Back = Biometric Thumb-Well in Phase 1-2; Front = Stone + Church Bezel in Phase 3) */}
+        {/* 3 & 4. Stone + Church Bezel 3D Flipper (Concentric 1:1 Socket, Rectangular Alpha Box Masked) */}
         <button
           type="button"
           onMouseDown={handleThumbWellDown}
           onTouchStart={handleThumbWellDown}
           onClick={handleThumbWellDown}
-          className="relative w-[68%] h-[68%] z-30 perspective-1000 cursor-pointer focus:outline-none group"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[66%] h-[66%] aspect-square rounded-full z-30 cursor-pointer focus:outline-none group"
+          style={{ perspective: '1000px' }}
           aria-label="Press Biometric Thumb-Well to Ignite Konran OS"
         >
           <div
-            className="w-full h-full relative transition-transform duration-1000 transform-style-preserve-3d"
+            className="w-full h-full aspect-square relative transition-transform duration-1000 rounded-full"
             style={{
+              transformStyle: 'preserve-3d',
+              transformOrigin: '50% 50%',
               transform: isStoneFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
             }}
           >
             {/* Initial Face (0deg during Cold Start): Biometric Thumb-Well (stones/backs/{deity}.png) */}
-            <div className="absolute inset-0 w-full h-full backface-hidden flex items-center justify-center">
+            <div
+              className="absolute inset-0 w-full h-full aspect-square rounded-full overflow-hidden flex items-center justify-center"
+              style={{
+                backfaceVisibility: 'hidden',
+                WebkitBackfaceVisibility: 'hidden',
+                clipPath: 'circle(48% at 50% 50%)',
+              }}
+            >
               <img
                 src={`/assets/konran/stones/backs/${deitySlug}.png`}
                 alt="Biometric Thumb-Well"
-                className="w-[84%] h-[84%] object-contain transition-transform duration-300 group-hover:scale-105 group-active:scale-95 drop-shadow-[0_4px_14px_rgba(0,0,0,0.9)]"
-                style={{ opacity: phase >= 1 ? 1 : 0.15 }}
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[86%] h-[86%] aspect-square object-contain rounded-full transition-transform duration-300 group-hover:scale-105 group-active:scale-95 drop-shadow-[0_4px_14px_rgba(0,0,0,0.9)]"
+                style={{
+                  opacity: phase >= 1 ? 1 : 0.15,
+                  clipPath: 'circle(47% at 50% 50%)',
+                }}
                 draggable={false}
               />
               {phase === 1 && scanProgress === 0 && (
@@ -196,19 +215,31 @@ export const ColdStartIgnition: React.FC<ColdStartIgnitionProps> = ({
 
             {/* Ignited Face (180deg flip in Phase 3): Z:1 3D Faceted Sacred Mineral + Z:2 Hollow Church Bezel */}
             <div
-              className="absolute inset-0 w-full h-full backface-hidden flex items-center justify-center"
-              style={{ transform: 'rotateY(180deg)' }}
+              className="absolute inset-0 w-full h-full aspect-square rounded-full overflow-hidden flex items-center justify-center"
+              style={{
+                transform: 'rotateY(180deg)',
+                transformOrigin: '50% 50%',
+                backfaceVisibility: 'hidden',
+                WebkitBackfaceVisibility: 'hidden',
+                clipPath: 'circle(48.5% at 50% 50%)',
+              }}
             >
               <img
                 src={`/assets/konran/stones/fronts/${deitySlug}.png`}
                 alt={`${palette.mineral} Faceted Gem`}
-                className="absolute w-[84%] h-[84%] object-contain z-10 drop-shadow-[0_0_25px_var(--patron-glow)]"
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[82%] h-[82%] aspect-square object-contain rounded-full z-10 drop-shadow-[0_0_25px_var(--patron-glow)]"
+                style={{
+                  clipPath: 'circle(47% at 50% 50%)',
+                }}
                 draggable={false}
               />
               <img
                 src={`/assets/konran/frames/church_bezels/${deitySlug}.png`}
                 alt={`${palette.displayName} Housing Bezel`}
-                className="absolute inset-0 w-full h-full object-contain z-20 drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]"
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full aspect-square object-contain rounded-full z-20 drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]"
+                style={{
+                  clipPath: 'circle(48.5% at 50% 50%)',
+                }}
                 draggable={false}
               />
             </div>

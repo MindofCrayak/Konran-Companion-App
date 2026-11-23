@@ -246,7 +246,8 @@ export const FatedBadgeToken: React.FC<FatedBadgeTokenProps> = ({
         <img
           src="/assets/konran/crests/misc/gold_port_receiver.png"
           alt="Gold Port Receiver"
-          className="absolute inset-0 w-full h-full object-contain pointer-events-none z-10 drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full aspect-square object-contain pointer-events-none z-10 rounded-full drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]"
+          style={{ clipPath: 'circle(49% at 50% 50%)' }}
           draggable={false}
         />
 
@@ -254,7 +255,8 @@ export const FatedBadgeToken: React.FC<FatedBadgeTokenProps> = ({
         <img
           src="/assets/konran/crests/misc/nyne_petal_lotus.png"
           alt="Nyne-Petal Stained Glass Lotus"
-          className="absolute w-[66%] h-[66%] object-contain pointer-events-none z-15 opacity-90"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[66%] h-[66%] aspect-square object-contain pointer-events-none z-15 opacity-90 rounded-full"
+          style={{ clipPath: 'circle(49% at 50% 50%)' }}
           draggable={false}
         />
 
@@ -262,48 +264,71 @@ export const FatedBadgeToken: React.FC<FatedBadgeTokenProps> = ({
         <img
           src="/assets/konran/crests/misc/astrolabe_chapter_ring.png"
           alt="Astrolabe Nonary Chapter Ring"
-          className="absolute w-[92%] h-[92%] object-contain pointer-events-none z-20 transition-transform duration-1000 ease-out drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)]"
+          className="absolute top-1/2 left-1/2 w-[92%] h-[92%] aspect-square object-contain pointer-events-none z-20 transition-transform duration-1000 ease-out rounded-full drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)]"
           style={{
-            transform: `rotate(${calculatedRotation}deg)`,
+            transform: `translate(-50%, -50%) rotate(${calculatedRotation}deg)`,
+            transformOrigin: '50% 50%',
+            clipPath: 'circle(49% at 50% 50%)',
           }}
           draggable={false}
         />
 
-        {/* Layer 3 & 4: Central 3D Flipping Core (Front = Z:1 Stone + Z:2 Hollow Church Bezel; Back = Concave Biometric Thumb-Well) */}
-        <div className="relative w-[68%] h-[68%] z-30 perspective-1000 pointer-events-none">
+        {/* Layer 3 & 4: Central 3D Flipping Core (Concentric 1:1 Socket, Rectangular Alpha Box Masked) */}
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[66%] h-[66%] aspect-square rounded-full z-30 pointer-events-none"
+          style={{ perspective: '1000px' }}
+        >
           <div
-            className="w-full h-full relative transition-transform duration-700 transform-style-preserve-3d"
+            className="w-full h-full aspect-square relative transition-transform duration-700 rounded-full"
             style={{
+              transformStyle: 'preserve-3d',
+              transformOrigin: '50% 50%',
               transform: isFrontVisible ? 'rotateY(0deg)' : 'rotateY(180deg)',
             }}
           >
             {/* Front Face: Z:1 Sacred Mineral Gem UNDERNEATH Z:2 Hollow Church Bezel */}
-            <div className="absolute inset-0 w-full h-full backface-hidden flex items-center justify-center">
+            <div
+              className="absolute inset-0 w-full h-full aspect-square rounded-full overflow-hidden flex items-center justify-center"
+              style={{
+                backfaceVisibility: 'hidden',
+                WebkitBackfaceVisibility: 'hidden',
+                clipPath: 'circle(48.5% at 50% 50%)',
+              }}
+            >
               {/* Z:1 Sacred Stone */}
               <img
                 src={`/assets/konran/stones/fronts/${deitySlug}.png`}
                 alt={`${palette.mineral} (Front)`}
-                className="absolute w-[84%] h-[84%] object-contain z-10 drop-shadow-[0_0_14px_var(--patron-glow)]"
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[82%] h-[82%] aspect-square object-contain rounded-full z-10 drop-shadow-[0_0_14px_var(--patron-glow)]"
+                style={{ clipPath: 'circle(47% at 50% 50%)' }}
                 draggable={false}
               />
               {/* Z:2 Ornate Church Bezel gripping the stone */}
               <img
                 src={`/assets/konran/frames/church_bezels/${deitySlug}.png`}
                 alt={`${palette.displayName} Church Bezel`}
-                className="absolute inset-0 w-full h-full object-contain z-20 drop-shadow-[0_4px_12px_rgba(0,0,0,0.92)]"
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full aspect-square object-contain rounded-full z-20 drop-shadow-[0_4px_12px_rgba(0,0,0,0.92)]"
+                style={{ clipPath: 'circle(48.5% at 50% 50%)' }}
                 draggable={false}
               />
             </div>
 
             {/* Back Face: Biometric Thumb-Well (stones/backs/{deity}.png) */}
             <div
-              className="absolute inset-0 w-full h-full backface-hidden flex items-center justify-center"
-              style={{ transform: 'rotateY(180deg)' }}
+              className="absolute inset-0 w-full h-full aspect-square rounded-full overflow-hidden flex items-center justify-center"
+              style={{
+                transform: 'rotateY(180deg)',
+                transformOrigin: '50% 50%',
+                backfaceVisibility: 'hidden',
+                WebkitBackfaceVisibility: 'hidden',
+                clipPath: 'circle(48% at 50% 50%)',
+              }}
             >
               <img
                 src={`/assets/konran/stones/backs/${deitySlug}.png`}
                 alt={`${palette.displayName} Biometric Thumb-Well (Back)`}
-                className="w-[86%] h-[86%] object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]"
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[86%] h-[86%] aspect-square object-contain rounded-full drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]"
+                style={{ clipPath: 'circle(47% at 50% 50%)' }}
                 draggable={false}
               />
               {isPressing && (
