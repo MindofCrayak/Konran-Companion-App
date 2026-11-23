@@ -13,6 +13,7 @@ import {
   Terminal,
   Lock,
   Layers,
+  Smartphone,
 } from 'lucide-react';
 import {
   WheelPreferences,
@@ -22,6 +23,7 @@ import {
   DEFAULT_WHEEL_PREFERENCES,
 } from '../types/slabletOS';
 import { playKeyClick, playOptionSelect } from '../utils/audio';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 interface OSCalibrationPanelProps {
   preferences: WheelPreferences;
@@ -54,6 +56,7 @@ export const OSCalibrationPanel: React.FC<OSCalibrationPanelProps> = ({
   onReplayTutorial,
 }) => {
   const [activeTab, setActiveTab] = useState<'wheel' | 'macros' | 'portals'>('wheel');
+  const { isInstalled, isIOS, hasNativePrompt, triggerInstall } = usePWAInstall();
 
   // Custom Portal Form State
   const [newPortalName, setNewPortalName] = useState('');
@@ -297,6 +300,41 @@ export const OSCalibrationPanel: React.FC<OSCalibrationPanelProps> = ({
                   style={{ backgroundColor: col }}
                 />
               ))}
+            </div>
+          </div>
+
+          {/* Fullscreen PWA / APK Standalone Install Section */}
+          <div className="bg-black/40 border border-[#c084fc]/30 p-3 rounded flex items-center justify-between">
+            <div>
+              <div className="font-bold text-[#c084fc] flex items-center gap-1.5">
+                <Download className="w-4 h-4" />
+                <span>Fullscreen Standalone Mode (PWA)</span>
+              </div>
+              <div className="text-[10px] text-white/50">
+                {isInstalled
+                  ? 'Standalone Fullscreen App mode active — browser URL and navigation chrome eliminated.'
+                  : 'Install to Home Screen to eliminate mobile browser navigation bars and run fullscreen.'}
+              </div>
+            </div>
+            <div>
+              {isInstalled ? (
+                <span className="px-2.5 py-1 rounded bg-[#39ff14]/20 border border-[#39ff14]/40 text-[#39ff14] text-[10px] font-bold">
+                  INSTALLED
+                </span>
+              ) : hasNativePrompt ? (
+                <button
+                  onClick={triggerInstall}
+                  className="px-3 py-1.5 rounded bg-[#c084fc]/20 hover:bg-[#c084fc]/30 border border-[#c084fc] text-[#c084fc] text-xs font-bold cursor-pointer transition-colors shadow-[0_0_10px_rgba(192,132,252,0.3)]"
+                >
+                  Install App
+                </button>
+              ) : isIOS ? (
+                <div className="text-[9.5px] text-[#38bdf8] border border-[#38bdf8]/40 px-2 py-1 rounded bg-[#38bdf8]/10 text-right">
+                  Share ⎋ → Add to Home Screen ⊞
+                </div>
+              ) : (
+                <span className="text-[10px] text-white/40">Browser Controlled</span>
+              )}
             </div>
           </div>
 

@@ -76,23 +76,6 @@
   box-sizing: border-box;
 }
 
-.slablet-footer {
-  position: relative;
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 30px;
-  height: 30px;
-  max-height: 30px;
-  padding: 0 clamp(8px, 1.5vw, 18px);
-  border-top: 1px solid var(--slablet-glow);
-  background: rgba(3, 8, 12, 0.98);
-  box-shadow: 0 -2px 14px rgba(0, 0, 0, 0.7);
-  box-sizing: border-box;
-}
-
 .slablet-brand,
 .slablet-character,
 .slablet-clock,
@@ -350,26 +333,7 @@
     min-width: 240px; 
     min-height: 240px; 
   }
-
-  /* Ultra-thin Footer on Mobile */
-  .slablet-footer { 
-    min-height: 28px;
-    height: 28px;
-    max-height: 28px;
-    padding: 0 8px; 
-    border-top: 1px solid var(--slablet-glow);
-    background: rgba(3, 8, 12, 0.98);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
-  }
   
-  .slablet-moons-footer { display: none; }
-  .slablet-coordinates { gap: 4px; }
-  .slablet-coordinates svg { width: 11px; height: 11px; }
-  .slablet-coordinates small { display: none; }
-  .slablet-coordinates strong { font-size: 8px; }
   .slablet-signal { display: none; }
 }
 

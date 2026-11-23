@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Fingerprint, ShieldCheck } from 'lucide-react';
+import { Fingerprint, ShieldCheck, Download, Smartphone } from 'lucide-react';
 import { CharacterProfile, PlayerAccount, NyneDeityId } from '../types';
 import { ASTROLABE_DEITY_ORDER, LITURGICAL_PALETTES } from './FatedBadgeToken';
 import { playKeyClick, playOptionSelect, playDivineReveal } from '../utils/audio';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 interface ColdStartIgnitionProps {
   character: CharacterProfile | null;
@@ -21,6 +22,7 @@ export const ColdStartIgnition: React.FC<ColdStartIgnitionProps> = ({
   const [ringAngle, setRingAngle] = useState<number>(180); // Starts unaligned
   const [isStoneFlipped, setIsStoneFlipped] = useState<boolean>(false); // false = back (biometric thumb-well), true = front (faceted gem + bezel)
   const [scanProgress, setScanProgress] = useState<number>(0);
+  const { canInstall, isInstalled, isIOS, hasNativePrompt, triggerInstall } = usePWAInstall();
 
   const activeDeity: NyneDeityId = character?.declaredDeity || 'Oray';
   const deitySlug = activeDeity.toLowerCase();
@@ -245,6 +247,27 @@ export const ColdStartIgnition: React.FC<ColdStartIgnitionProps> = ({
                 Bypass Ritual
               </button>
             </div>
+
+            {/* In-App Fullscreen PWA Install Prompt */}
+            {!isInstalled && (
+              <div className="pt-2">
+                {hasNativePrompt ? (
+                  <button
+                    type="button"
+                    onClick={triggerInstall}
+                    className="px-3 py-1.5 rounded-xs bg-[#c084fc]/15 hover:bg-[#c084fc]/25 border border-[#c084fc]/50 text-[#c084fc] font-mono text-[11px] uppercase tracking-wider inline-flex items-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(192,132,252,0.25)] transition-all"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Install Slablet App (Fullscreen)</span>
+                  </button>
+                ) : isIOS ? (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-black/60 border border-white/20 rounded text-[10px] font-mono text-[#ded7f0]/80">
+                    <Smartphone className="w-3 h-3 text-[#38bdf8]" />
+                    <span>Tap Share <strong className="text-white">⎋</strong> → <strong className="text-white">Add to Home Screen ⊞</strong> for Fullscreen</span>
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
         ) : (
           <div

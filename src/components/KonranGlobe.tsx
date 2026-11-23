@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { ZDepthTier } from '../types/slabletOS';
+import { ZDepthTier, GlobePin, SolarBody } from '../types/slabletOS';
 import { CANONICAL_SOLAR_SYSTEM } from '../utils/celestial';
-import { playDetentTick, triggerHaptic } from '../utils/audio';
+import { CANONICAL_GLOBE_PINS } from '../utils/legendKeeperData';
+import { playDetentTick, triggerHaptic, playOptionSelect } from '../utils/audio';
 
 // Generates a 100% seamless, continuous 360-degree cloud and storm sphere
 const createCloudTexture = (): THREE.CanvasTexture => {
@@ -18,7 +19,6 @@ const createCloudTexture = (): THREE.CanvasTexture => {
   const w = canvas.width;
   const h = canvas.height;
 
-  // Helper: Draws a soft cloud mass with calibrated wrap-around gradients
   const drawCloud = (cx: number, cy: number, radius: number, opacity: number) => {
     const drawAt = (x: number) => {
       const grad = ctx.createRadialGradient(x, cy, 0, x, cy, radius);
@@ -33,12 +33,10 @@ const createCloudTexture = (): THREE.CanvasTexture => {
     };
 
     drawAt(cx);
-    // Properly center wrapped gradients so edges fuse seamlessly
     if (cx - radius < 0) drawAt(cx + w);
     if (cx + radius > w) drawAt(cx - w);
   };
 
-  // 1. Seamless Jet Streams (Exact 2*PI harmonic frequencies)
   for (const yBand of [h * 0.32, h * 0.68]) {
     for (let x = 0; x < w; x += 18) {
       const theta = (x / w) * Math.PI * 2;
@@ -49,17 +47,15 @@ const createCloudTexture = (): THREE.CanvasTexture => {
     }
   }
 
-  // 2. Continental Cumulus Cloud Clusters
   const numClusters = 85;
   for (let i = 0; i < numClusters; i++) {
     const cx = Math.random() * w;
-    const lat = (Math.random() - 0.5) * 0.72; // Keep off pinched poles
+    const lat = (Math.random() - 0.5) * 0.72;
     const cy = h * (0.5 + lat);
     const radius = 65 + Math.random() * 85;
     drawCloud(cx, cy, radius, 0.8);
   }
 
-  // 3. Two Major Cyclonic Storm Vortexes with Wrapped Spiral Arms
   const storms = [
     { x: w * 0.28, y: h * 0.36, rad: 90 },
     { x: w * 0.76, y: h * 0.62, rad: 105 },
@@ -76,7 +72,6 @@ const createCloudTexture = (): THREE.CanvasTexture => {
     }
   });
 
-  // 4. Seam Stitch Pass: Fuses column 0 and column (w - 1)
   const imgData = ctx.getImageData(0, 0, w, h);
   const data = imgData.data;
   for (let y = 0; y < h; y++) {
@@ -100,6 +95,8 @@ interface KonranGlobeProps {
   zTier?: ZDepthTier;
   onGlobeClick?: () => void;
   onZTierChange?: (tier: ZDepthTier) => void;
+  onPinClick?: (pin: GlobePin) => void;
+  onCelestialBodyClick?: (body: SolarBody) => void;
 }
 
 const TIER_CAM_Z: Record<ZDepthTier, number> = {
@@ -108,17 +105,24 @@ const TIER_CAM_Z: Record<ZDepthTier, number> = {
   system: 18.0,
 };
 
-export const KonranGlobe = ({ 
-  zTier = 'planet', 
-  onGlobeClick, 
-  onZTierChange 
+export const KonranGlobe = ({
+  zTier = 'planet',
+  onGlobeClick,
+  onZTierChange,
+  onPinClick,
+  onCelestialBodyClick,
 }: KonranGlobeProps = {}) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const onGlobeClickRef = useRef(onGlobeClick);
   onGlobeClickRef.current = onGlobeClick;
   const onZTierChangeRef = useRef(onZTierChange);
   onZTierChangeRef.current = onZTierChange;
-  const zTierRef = useRef(zTier);
+  const onPinClickRef = useRef(onPinClick);
+  onPinClickRef.current = onPinClick;
+  const onCelestialBodyClickRef = useRef(onCelestialBodyClick);
+  onCelestialBodyClickRef.current = onCelestialBodyClick;
+
+  const zTierRef = useRef<ZDepthTier>(zTier);
   zTierRef.current = zTier;
 
   useEffect(() => {
@@ -126,7 +130,7 @@ export const KonranGlobe = ({
     if (!mount) return;
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 150);
+    const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 1000);
     camera.position.z = TIER_CAM_Z[zTier];
 
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
@@ -145,7 +149,7 @@ export const KonranGlobe = ({
       '/assets/konran-map.jpg',
       undefined,
       undefined,
-      (error) => console.error('Unable to load the Konran map texture.', error),
+      (error) => console.error('Unable to load the Konran map texture.', error)
     );
     texture.colorSpace = THREE.SRGBColorSpace;
 
@@ -172,7 +176,7 @@ export const KonranGlobe = ({
     const clouds = new THREE.Mesh(cloudGeometry, cloudMaterial);
     planet.add(clouds);
 
-    // 3. Atmospheric Halo Glow (No grid lines)
+    // 3. Atmospheric Halo Glow (Transparent center preserving core)
     const atmosphereGeometry = new THREE.SphereGeometry(1.39, 64, 48);
     const atmosphereMaterial = new THREE.MeshBasicMaterial({
       color: '#39ff14',
@@ -185,7 +189,7 @@ export const KonranGlobe = ({
     const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
     planet.add(atmosphere);
 
-    // 4. Olysphere (Gold Sentinel Moon) — Calibrated distance to prevent viewport clipping
+    // 4. Olysphere (Gold Sentinel Moon) — Calibrated r=1.68
     const olysphereOrbit = new THREE.Group();
     planet.add(olysphereOrbit);
 
@@ -197,19 +201,19 @@ export const KonranGlobe = ({
         emissiveIntensity: 0.45,
         roughness: 0.6,
         metalness: 0.1,
-      }),
+      })
     );
     olysphere.position.set(1.68, 0.16, 0);
     olysphereOrbit.add(olysphere);
 
     const sentinelLight = new THREE.Mesh(
       new THREE.SphereGeometry(0.03, 16, 12),
-      new THREE.MeshBasicMaterial({ color: '#fffdf0' }),
+      new THREE.MeshBasicMaterial({ color: '#fffdf0' })
     );
     sentinelLight.position.set(0.03, 0.05, 0.09);
     olysphere.add(sentinelLight);
 
-    // 5. Ayanath (Violet Watchtower Moon) — Calibrated distance to prevent clipping
+    // 5. Ayanath (Violet Watchtower Moon) — Calibrated r=-1.86
     const ayanathOrbit = new THREE.Group();
     ayanathOrbit.rotation.z = THREE.MathUtils.degToRad(28);
     planet.add(ayanathOrbit);
@@ -218,59 +222,162 @@ export const KonranGlobe = ({
       new THREE.SphereGeometry(0.13, 32, 24),
       new THREE.MeshStandardMaterial({
         color: '#9c68dc',
-        emissive: '#441673',
+        emissive: '#4e287a',
         emissiveIntensity: 0.5,
         roughness: 0.5,
         metalness: 0.2,
-      }),
+      })
     );
-    ayanath.position.set(-1.86, 0.05, 0);
+    ayanath.position.set(-1.86, -0.22, 0);
     ayanathOrbit.add(ayanath);
 
     const watchtowerRing = new THREE.Mesh(
       new THREE.TorusGeometry(0.22, 0.01, 12, 48),
-      new THREE.MeshBasicMaterial({ color: '#c49cff', transparent: true, opacity: 0.85 }),
+      new THREE.MeshBasicMaterial({ color: '#c49cff', transparent: true, opacity: 0.85 })
     );
     watchtowerRing.rotation.x = THREE.MathUtils.degToRad(72);
     ayanath.add(watchtowerRing);
 
     // ==========================================
-    // 2. FULL SOLAR SYSTEM VIEW (TIER 3)
+    // 2. LEGENDKEEPER GLOBE PINS (PROVINCES & CITIES)
+    // ==========================================
+    const pinsGroup = new THREE.Group();
+    planet.add(pinsGroup);
+
+    const pinMeshes: Array<{
+      mesh: THREE.Mesh;
+      pin: GlobePin;
+      normal: THREE.Vector3;
+    }> = [];
+
+    const loadPins = async () => {
+      let rawPins: GlobePin[] = CANONICAL_GLOBE_PINS;
+      try {
+        const res = await fetch('/api/lore/legendkeeper?pins=1');
+        if (res.ok) {
+          const json: any = await res.json();
+          if (Array.isArray(json.data) && json.data.length > 0) {
+            rawPins = json.data;
+          }
+        }
+      } catch {
+        // Fallback to canonical pins
+      }
+
+      rawPins.forEach((pin) => {
+        const phi = (90 - pin.lat) * (Math.PI / 180);
+        const theta = (pin.lng + 180) * (Math.PI / 180);
+        const r = 1.38;
+
+        const x = -r * Math.sin(phi) * Math.cos(theta);
+        const y = r * Math.cos(phi);
+        const z = r * Math.sin(phi) * Math.sin(theta);
+
+        const normal = new THREE.Vector3(x, y, z).normalize();
+
+        const isProvince = pin.tier === 'province';
+        const pinSize = isProvince ? 0.042 : 0.026;
+        const color = pin.iconColor || (isProvince ? '#ffd700' : '#38bdf8');
+
+        // Diamond / Beacon Mesh
+        const pGeom = new THREE.OctahedronGeometry(pinSize, 0);
+        const pMat = new THREE.MeshStandardMaterial({
+          color,
+          emissive: color,
+          emissiveIntensity: 0.75,
+          roughness: 0.3,
+          metalness: 0.8,
+        });
+        const pMesh = new THREE.Mesh(pGeom, pMat);
+        pMesh.position.set(x, y, z);
+        pMesh.userData = { globePin: pin };
+
+        // Outer pulsing ring
+        const ringGeom = new THREE.RingGeometry(pinSize * 1.2, pinSize * 1.7, 16);
+        const ringMat = new THREE.MeshBasicMaterial({
+          color,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.65,
+        });
+        const ring = new THREE.Mesh(ringGeom, ringMat);
+        ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+        pMesh.add(ring);
+
+        pinsGroup.add(pMesh);
+        pinMeshes.push({ mesh: pMesh, pin, normal });
+      });
+    };
+
+    loadPins();
+
+    // ==========================================
+    // 3. FULL CANONICAL 3D SOLAR SYSTEM (TIER 3)
     // ==========================================
     const solarSystemGroup = new THREE.Group();
     solarSystemGroup.visible = false;
     scene.add(solarSystemGroup);
 
-    // Central Sun (Sol-Prime / Ay)
-    const sunGeom = new THREE.SphereGeometry(0.72, 32, 24);
-    const sunMat = new THREE.MeshBasicMaterial({ color: '#ffdd44' });
-    const sunMesh = new THREE.Mesh(sunGeom, sunMat);
-    solarSystemGroup.add(sunMesh);
+    const solarClickableMeshes: THREE.Object3D[] = [];
+    const rotatingParts: Array<{ obj: THREE.Object3D; speed: number; axis?: 'x' | 'y' | 'z' }> = [];
 
-    // Sun Corona Halo
-    const coronaGeom = new THREE.SphereGeometry(0.88, 32, 24);
-    const coronaMat = new THREE.MeshBasicMaterial({
-      color: '#f59e0b',
-      transparent: true,
-      opacity: 0.35,
-      side: THREE.BackSide,
-      blending: THREE.AdditiveBlending,
-    });
-    solarSystemGroup.add(new THREE.Mesh(coronaGeom, coronaMat));
-
-    // Celestial Planetary Planes & Orbits
     const planetOrbitMeshes: Array<{
       group: THREE.Group;
-      mesh: THREE.Mesh;
+      mesh: THREE.Object3D;
       speed: number;
       orbitRadius: number;
-      bodyId: string;
+      body: SolarBody;
     }> = [];
 
+    // Build the 10 Canonical Celestial Bodies
     CANONICAL_SOLAR_SYSTEM.forEach((body) => {
-      if (body.type === 'sun') return;
+      if (body.type === 'sun') {
+        // Ayan (The Sun — Ay)
+        const sunHolder = new THREE.Group();
+        sunHolder.userData = { solarBody: body };
 
-      // Thin orbital ring
+        // Bright white core
+        const coreGeom = new THREE.SphereGeometry(body.size, 32, 24);
+        const coreMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
+        const coreMesh = new THREE.Mesh(coreGeom, coreMat);
+        sunHolder.add(coreMesh);
+        solarClickableMeshes.push(coreMesh);
+
+        // Pulsating Solar Corona
+        const coronaGeom = new THREE.SphereGeometry(body.size * 1.35, 32, 24);
+        const coronaMat = new THREE.MeshBasicMaterial({
+          color: '#facc15',
+          transparent: true,
+          opacity: 0.45,
+          side: THREE.BackSide,
+          blending: THREE.AdditiveBlending,
+        });
+        const coronaMesh = new THREE.Mesh(coronaGeom, coronaMat);
+        sunHolder.add(coronaMesh);
+
+        // Woven Blue & Yellow Filaments
+        const blueLoop = new THREE.Mesh(
+          new THREE.TorusGeometry(body.size * 1.45, 0.02, 12, 64),
+          new THREE.MeshBasicMaterial({ color: '#38bdf8', transparent: true, opacity: 0.85 })
+        );
+        blueLoop.rotation.x = Math.PI / 3;
+        sunHolder.add(blueLoop);
+        rotatingParts.push({ obj: blueLoop, speed: 0.012, axis: 'y' });
+
+        const yellowLoop = new THREE.Mesh(
+          new THREE.TorusGeometry(body.size * 1.52, 0.02, 12, 64),
+          new THREE.MeshBasicMaterial({ color: '#fbbf24', transparent: true, opacity: 0.85 })
+        );
+        yellowLoop.rotation.y = Math.PI / 4;
+        yellowLoop.rotation.z = Math.PI / 5;
+        sunHolder.add(yellowLoop);
+        rotatingParts.push({ obj: yellowLoop, speed: -0.014, axis: 'z' });
+
+        solarSystemGroup.add(sunHolder);
+        return;
+      }
+
+      // Thin orbital line
       const ringGeom = new THREE.BufferGeometry();
       const points: THREE.Vector3[] = [];
       const segments = 96;
@@ -285,54 +392,186 @@ export const KonranGlobe = ({
       );
       solarSystemGroup.add(ringLine);
 
-      // Planet Orbit Holder
+      // Orbit Holder
       const orbitHolder = new THREE.Group();
-      if (body.orbitTilt) {
-        orbitHolder.rotation.x = THREE.MathUtils.degToRad(body.orbitTilt);
-      }
       solarSystemGroup.add(orbitHolder);
 
-      // Planet Mesh
-      const pMesh = new THREE.Mesh(
-        new THREE.SphereGeometry(body.size, 24, 18),
-        new THREE.MeshStandardMaterial({
-          color: body.color,
-          roughness: 0.6,
-          metalness: 0.2,
-          emissive: body.color,
-          emissiveIntensity: 0.25,
-        })
-      );
-      pMesh.position.set(body.orbitRadius, 0, 0);
+      // Planet Holder placed at orbitRadius
+      const planetHolder = new THREE.Group();
+      planetHolder.position.set(body.orbitRadius, 0, 0);
+      planetHolder.userData = { solarBody: body };
+      orbitHolder.add(planetHolder);
 
-      // Planetary rings if applicable
-      if (body.hasRings && body.ringColor) {
+      // Distinct Canonical Mesh & Shading per visualStyle
+      if (body.visualStyle === 'mushroom_basin') {
+        // Kay-Kee (Kayzoku): Two separated counter-rotating halves
+        const kayGeom = new THREE.SphereGeometry(body.size, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.46);
+        const kayMesh = new THREE.Mesh(
+          kayGeom,
+          new THREE.MeshStandardMaterial({ color: '#d4b35e', roughness: 0.8, emissive: '#854d0e', emissiveIntensity: 0.3 })
+        );
+        kayMesh.position.y = 0.04;
+        planetHolder.add(kayMesh);
+        solarClickableMeshes.push(kayMesh);
+        rotatingParts.push({ obj: kayMesh, speed: 0.02, axis: 'y' });
+
+        const keeGeom = new THREE.SphereGeometry(body.size, 24, 16, 0, Math.PI * 2, Math.PI * 0.54, Math.PI * 0.46);
+        const keeMesh = new THREE.Mesh(
+          keeGeom,
+          new THREE.MeshStandardMaterial({ color: '#38bdf8', roughness: 0.4, emissive: '#0284c7', emissiveIntensity: 0.4 })
+        );
+        keeMesh.position.y = -0.04;
+        planetHolder.add(keeMesh);
+        solarClickableMeshes.push(keeMesh);
+        rotatingParts.push({ obj: keeMesh, speed: -0.02, axis: 'y' });
+      } else if (body.visualStyle === 'volcanic_dust') {
+        // Synthelavor (Slavyna): Scorched sphere + red rings + nebula shroud
+        const pMesh = new THREE.Mesh(
+          new THREE.SphereGeometry(body.size, 24, 18),
+          new THREE.MeshStandardMaterial({ color: '#ef4444', roughness: 0.7, emissive: '#7f1d1d', emissiveIntensity: 0.6 })
+        );
+        planetHolder.add(pMesh);
+        solarClickableMeshes.push(pMesh);
+
+        // Glittering red rings
         const rMesh = new THREE.Mesh(
-          new THREE.RingGeometry(body.size * 1.4, body.size * 2.1, 32),
-          new THREE.MeshBasicMaterial({
-            color: body.ringColor,
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 0.6,
-          })
+          new THREE.RingGeometry(body.size * 1.35, body.size * 2.2, 32),
+          new THREE.MeshBasicMaterial({ color: '#b91c1c', side: THREE.DoubleSide, transparent: true, opacity: 0.75 })
         );
         rMesh.rotation.x = Math.PI / 2.3;
-        pMesh.add(rMesh);
+        planetHolder.add(rMesh);
+
+        // Nebula dust shroud
+        const dustMesh = new THREE.Mesh(
+          new THREE.SphereGeometry(body.size * 1.8, 16, 12),
+          new THREE.MeshBasicMaterial({
+            color: '#ec4899',
+            transparent: true,
+            opacity: 0.22,
+            blending: THREE.AdditiveBlending,
+            side: THREE.BackSide,
+          })
+        );
+        planetHolder.add(dustMesh);
+      } else if (body.visualStyle === 'aerial_islands') {
+        // Lona Uyn (Lyricia): Azure water & green land + ring halo + floating rock islands
+        const pMesh = new THREE.Mesh(
+          new THREE.SphereGeometry(body.size, 24, 18),
+          new THREE.MeshStandardMaterial({ color: '#38bdf8', roughness: 0.5, emissive: '#0284c7', emissiveIntensity: 0.35 })
+        );
+        planetHolder.add(pMesh);
+        solarClickableMeshes.push(pMesh);
+
+        // Ring halo
+        const haloMesh = new THREE.Mesh(
+          new THREE.TorusGeometry(body.size * 1.5, 0.015, 12, 48),
+          new THREE.MeshBasicMaterial({ color: '#ec4899', transparent: true, opacity: 0.85 })
+        );
+        haloMesh.rotation.x = Math.PI / 2.5;
+        planetHolder.add(haloMesh);
+
+        // Floating aerial rock islands
+        for (let i = 0; i < 4; i++) {
+          const island = new THREE.Mesh(
+            new THREE.DodecahedronGeometry(0.04, 0),
+            new THREE.MeshStandardMaterial({ color: '#22c55e', roughness: 0.9 })
+          );
+          const ang = (i / 4) * Math.PI * 2;
+          island.position.set(Math.cos(ang) * (body.size + 0.1), 0.05 * (i % 2 === 0 ? 1 : -1), Math.sin(ang) * (body.size + 0.1));
+          planetHolder.add(island);
+        }
+      } else if (body.visualStyle === 'dragon_eye') {
+        // Dyata (Oray): Golden world with dark caldera & glowing dragon pupil
+        const pMesh = new THREE.Mesh(
+          new THREE.SphereGeometry(body.size, 24, 18),
+          new THREE.MeshStandardMaterial({ color: '#d97706', roughness: 0.6, emissive: '#b45309', emissiveIntensity: 0.5 })
+        );
+        planetHolder.add(pMesh);
+        solarClickableMeshes.push(pMesh);
+
+        // Caldera eye ring
+        const eyeRing = new THREE.Mesh(
+          new THREE.RingGeometry(body.size * 0.4, body.size * 0.75, 24),
+          new THREE.MeshBasicMaterial({ color: '#171717', side: THREE.DoubleSide })
+        );
+        eyeRing.position.z = body.size * 0.95;
+        pMesh.add(eyeRing);
+      } else if (body.visualStyle === 'brain_lobes') {
+        // Kestox / Keztox (Krayvuk): Two-lobed battle station split by yellow acid trench
+        const kesLobe = new THREE.Mesh(
+          new THREE.SphereGeometry(body.size * 0.75, 20, 16),
+          new THREE.MeshStandardMaterial({ color: '#84cc16', roughness: 0.7, emissive: '#4d7c0f', emissiveIntensity: 0.4 })
+        );
+        kesLobe.position.x = -body.size * 0.4;
+        planetHolder.add(kesLobe);
+        solarClickableMeshes.push(kesLobe);
+
+        const toxLobe = new THREE.Mesh(
+          new THREE.SphereGeometry(body.size * 0.75, 20, 16),
+          new THREE.MeshStandardMaterial({ color: '#7e22ce', roughness: 0.5, metalness: 0.4, emissive: '#581c87', emissiveIntensity: 0.4 })
+        );
+        toxLobe.position.x = body.size * 0.4;
+        planetHolder.add(toxLobe);
+        solarClickableMeshes.push(toxLobe);
+
+        // Acid trench
+        const trench = new THREE.Mesh(
+          new THREE.TorusGeometry(body.size * 0.65, 0.02, 12, 32),
+          new THREE.MeshBasicMaterial({ color: '#facc15' })
+        );
+        trench.rotation.y = Math.PI / 2;
+        planetHolder.add(trench);
+      } else {
+        // Standard Sphere with Rings / Mist
+        const pMesh = new THREE.Mesh(
+          new THREE.SphereGeometry(body.size, 24, 18),
+          new THREE.MeshStandardMaterial({
+            color: body.color,
+            roughness: 0.6,
+            metalness: 0.2,
+            emissive: body.color,
+            emissiveIntensity: 0.35,
+          })
+        );
+        planetHolder.add(pMesh);
+        solarClickableMeshes.push(pMesh);
+
+        if (body.visualStyle === 'purple_mist') {
+          const mistMesh = new THREE.Mesh(
+            new THREE.SphereGeometry(body.size * 1.35, 16, 12),
+            new THREE.MeshBasicMaterial({ color: '#c084fc', transparent: true, opacity: 0.28, side: THREE.BackSide })
+          );
+          planetHolder.add(mistMesh);
+        }
       }
 
-      orbitHolder.add(pMesh);
+      // Add Moons if configured
+      if (body.moons && body.moons.length > 0) {
+        body.moons.forEach((m) => {
+          const mOrbit = new THREE.Group();
+          planetHolder.add(mOrbit);
+
+          const moonMesh = new THREE.Mesh(
+            new THREE.SphereGeometry(m.size, 16, 12),
+            new THREE.MeshStandardMaterial({ color: m.color, roughness: 0.7 })
+          );
+          moonMesh.position.set(m.orbitDistance, 0, 0);
+          mOrbit.add(moonMesh);
+          rotatingParts.push({ obj: mOrbit, speed: m.orbitSpeed, axis: 'y' });
+        });
+      }
 
       planetOrbitMeshes.push({
         group: orbitHolder,
-        mesh: pMesh,
+        mesh: planetHolder,
         speed: body.orbitSpeed,
         orbitRadius: body.orbitRadius,
-        bodyId: body.id,
+        body,
       });
     });
 
     // 6. Lighting
-    scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
     const keyLight = new THREE.DirectionalLight(0xfff5e0, 2.8);
     keyLight.position.set(-3.5, 1.8, 4.2);
@@ -342,7 +581,7 @@ export const KonranGlobe = ({
     rimLight.position.set(2.8, -1.8, -2.5);
     scene.add(rimLight);
 
-    const sunLight = new THREE.PointLight('#ffdd44', 3.0, 30);
+    const sunLight = new THREE.PointLight('#ffffff', 3.5, 40);
     sunLight.position.set(0, 0, 0);
     solarSystemGroup.add(sunLight);
 
@@ -365,6 +604,9 @@ export const KonranGlobe = ({
     let dragVelocityX = 0;
     let dragVelocityY = 0;
 
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
     const onPointerDown = (event: PointerEvent) => {
       isDragging = true;
       dragDistance = 0;
@@ -384,14 +626,14 @@ export const KonranGlobe = ({
         solarSystemGroup.rotation.x = THREE.MathUtils.clamp(
           solarSystemGroup.rotation.x + deltaY * 0.005,
           -Math.PI / 3,
-          Math.PI / 3,
+          Math.PI / 3
         );
       } else {
         planet.rotation.y += deltaX * 0.008;
         planet.rotation.x = THREE.MathUtils.clamp(
           planet.rotation.x + deltaY * 0.008,
           -Math.PI / 2,
-          Math.PI / 2,
+          Math.PI / 2
         );
       }
       dragVelocityX = deltaX * 0.0008;
@@ -400,19 +642,57 @@ export const KonranGlobe = ({
       previousY = event.clientY;
     };
 
-    const onPointerUp = () => {
-      if (isDragging && dragDistance < 6) {
+    const onPointerUp = (event: PointerEvent) => {
+      if (isDragging && dragDistance < 8) {
+        // Raycasting on Globe Pins and Celestial Bodies
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+
+        if (camera.position.z > 9.0) {
+          // Solar System view raycasting
+          const intersects = raycaster.intersectObjects(solarClickableMeshes, true);
+          if (intersects.length > 0) {
+            let hit: THREE.Object3D | null = intersects[0].object;
+            while (hit && !hit.userData.solarBody) {
+              hit = hit.parent;
+            }
+            if (hit?.userData?.solarBody) {
+              playOptionSelect();
+              onCelestialBodyClickRef.current?.(hit.userData.solarBody);
+              isDragging = false;
+              return;
+            }
+          }
+        } else {
+          // Globe Pins raycasting (Planet / Surface view)
+          const visiblePins = pinMeshes.filter((p) => p.mesh.visible).map((p) => p.mesh);
+          const intersects = raycaster.intersectObjects(visiblePins, true);
+          if (intersects.length > 0) {
+            let hit: THREE.Object3D | null = intersects[0].object;
+            while (hit && !hit.userData.globePin) {
+              hit = hit.parent;
+            }
+            if (hit?.userData?.globePin) {
+              playOptionSelect();
+              onPinClickRef.current?.(hit.userData.globePin);
+              isDragging = false;
+              return;
+            }
+          }
+        }
+
         onGlobeClickRef.current?.();
       }
       isDragging = false;
     };
 
-    // Pinch / Wheel Zoom between Z-Depth Tiers with tactile haptic feedback
+    // Pinch / Wheel Zoom between Z-Depth Tiers
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const current = zTierRef.current;
       if (e.deltaY > 20) {
-        // Zoom Out
         if (current === 'surface') {
           playDetentTick(1);
           triggerHaptic(14);
@@ -423,7 +703,6 @@ export const KonranGlobe = ({
           onZTierChangeRef.current?.('system');
         }
       } else if (e.deltaY < -20) {
-        // Zoom In
         if (current === 'system') {
           playDetentTick(1);
           triggerHaptic(14);
@@ -442,6 +721,9 @@ export const KonranGlobe = ({
     renderer.domElement.addEventListener('pointercancel', onPointerUp);
     renderer.domElement.addEventListener('wheel', onWheel, { passive: false });
 
+    const cameraWorldPos = new THREE.Vector3();
+    const pinWorldNormal = new THREE.Vector3();
+
     let frameId = 0;
     const animate = () => {
       frameId = window.requestAnimationFrame(animate);
@@ -450,7 +732,6 @@ export const KonranGlobe = ({
       const targetZ = TIER_CAM_Z[zTierRef.current];
       camera.position.z += (targetZ - camera.position.z) * 0.08;
 
-      // Visibility transitions between Planet vs System
       const isSystem = zTierRef.current === 'system';
       solarSystemGroup.visible = camera.position.z > 9.0;
       planet.visible = camera.position.z < 12.0;
@@ -460,7 +741,7 @@ export const KonranGlobe = ({
         planet.rotation.x = THREE.MathUtils.clamp(
           planet.rotation.x + dragVelocityY,
           -Math.PI / 2,
-          Math.PI / 2,
+          Math.PI / 2
         );
         if (isSystem) {
           solarSystemGroup.rotation.y += 0.0006 + dragVelocityX;
@@ -474,10 +755,45 @@ export const KonranGlobe = ({
       olysphereOrbit.rotation.y += 0.004;
       ayanathOrbit.rotation.y -= 0.0026;
 
-      // Solar system orbits (including dual reverse orbit of torn twins)
+      // Solar system orbits
       planetOrbitMeshes.forEach((item) => {
         item.group.rotation.y += item.speed;
       });
+
+      // Rotating sub-parts (Kay-Kee counter-rotation, filaments, moons)
+      rotatingParts.forEach((part) => {
+        const ax = part.axis || 'y';
+        part.obj.rotation[ax] += part.speed;
+      });
+
+      // Globe Pins Horizon Occlusion & Zoom LOD
+      if (planet.visible) {
+        camera.getWorldPosition(cameraWorldPos);
+        const camDist = camera.position.z;
+
+        pinMeshes.forEach(({ mesh, pin, normal }) => {
+          // Transform normal to world space
+          pinWorldNormal.copy(normal).applyQuaternion(planet.quaternion);
+
+          // Dot product: if facing away from camera, hide (horizon culling)
+          const dot = pinWorldNormal.dot(camera.position.clone().normalize());
+          const isFacingCamera = dot > 0.15;
+
+          if (!isFacingCamera) {
+            mesh.visible = false;
+            return;
+          }
+
+          // Zoom LOD:
+          // Orbital distance: show provinces and major capitals (Crafton Cove, Vantya, Padd City, etc.)
+          // Surface distance: show all cities and landmarks
+          if (camDist > 4.2) {
+            mesh.visible = pin.tier === 'province' || Boolean(pin.isCapital);
+          } else {
+            mesh.visible = true;
+          }
+        });
+      }
 
       renderer.render(scene, camera);
     };

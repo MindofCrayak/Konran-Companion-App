@@ -3,7 +3,7 @@
 .astrolabe-controller-root {
   position: fixed;
   z-index: 55;
-  bottom: 40px;
+  bottom: 12px;
   touch-action: none;
   user-select: none;
   display: flex;
@@ -13,11 +13,11 @@
 }
 
 .astrolabe-controller-root--left {
-  left: 16px;
+  left: 12px;
 }
 
 .astrolabe-controller-root--right {
-  right: 16px;
+  right: 12px;
 }
 
 /* 2-Stage Idle Ghost Mode */
@@ -29,34 +29,112 @@
 }
 
 .astrolabe-controller-root--ghost:hover {
-  opacity: 0.65 !important;
-  transform: scale(0.85) !important;
+  opacity: 0.75 !important;
+  transform: scale(0.9) !important;
 }
 
 /* Core Dial */
 .astrolabe-core-dial {
   position: relative;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, rgba(18, 30, 22, 0.95), rgba(4, 9, 6, 0.98));
+  background: radial-gradient(circle at 35% 35%, rgba(18, 30, 22, 0.96), rgba(4, 9, 6, 0.99));
   border: 1.5px solid var(--deity-accent, #39ff14);
-  box-shadow: 0 0 15px var(--deity-glow, rgba(57, 255, 20, 0.35)), inset 0 0 8px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0 16px var(--deity-glow, rgba(57, 255, 20, 0.35)), inset 0 0 10px rgba(0, 0, 0, 0.85);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   cursor: grab;
   transition: box-shadow 0.25s ease, border-color 0.25s ease;
+  z-index: 3;
 }
 
 .astrolabe-core-dial:active {
   cursor: grabbing;
-  box-shadow: 0 0 24px var(--deity-accent, #39ff14), inset 0 0 12px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 0 28px var(--deity-accent, #39ff14), inset 0 0 14px rgba(0, 0, 0, 0.95);
+}
+
+/* Biometric Thumbprint Core */
+.astrolabe-fingerprint-icon {
+  width: 52%;
+  height: 52%;
+  color: var(--deity-accent, #39ff14);
+  filter: drop-shadow(0 0 6px var(--deity-accent, #39ff14));
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.astrolabe-core-dial:active .astrolabe-fingerprint-icon {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 12px var(--deity-accent, #39ff14));
+}
+
+/* Tactile Outer Knurled Rotary Track Ring */
+.astrolabe-rotary-track {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 2px dashed var(--deity-accent, #39ff14);
+  opacity: 0.65;
+  pointer-events: none;
+  transition: transform 0.08s linear;
+  box-shadow: 0 0 12px var(--deity-glow, rgba(57, 255, 20, 0.25));
+}
+
+/* Docked Spyglass / Zoom-Lock Control */
+.astrolabe-docked-spyglass {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 9999px;
+  background: rgba(4, 9, 6, 0.92);
+  border: 1.2px solid #38bdf8;
+  color: #38bdf8;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+  cursor: pointer;
+  white-space: nowrap;
+  pointer-events: auto;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.astrolabe-docked-spyglass--left {
+  left: calc(100% + 14px);
+  bottom: 12px;
+}
+
+.astrolabe-docked-spyglass--right {
+  right: calc(100% + 14px);
+  bottom: 12px;
+}
+
+.astrolabe-docked-spyglass:hover {
+  background: rgba(56, 189, 248, 0.15);
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.5);
+}
+
+.astrolabe-docked-spyglass--locked {
+  border-color: #facc15 !important;
+  color: #facc15 !important;
+  background: rgba(250, 204, 21, 0.2) !important;
+  box-shadow: 0 0 20px rgba(250, 204, 21, 0.6), inset 0 0 8px rgba(250, 204, 21, 0.3) !important;
+  animation: zoom-pulse 1.4s infinite alternate;
+}
+
+@keyframes zoom-pulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.04); }
 }
 
 /* Substrate -1 Wireframe Visual Mode */
 .astrolabe-controller-root--substrate .astrolabe-core-dial {
   border-color: #00ffcc !important;
-  box-shadow: 0 0 18px rgba(0, 255, 204, 0.5), inset 0 0 10px rgba(0, 255, 204, 0.2) !important;
+  box-shadow: 0 0 20px rgba(0, 255, 204, 0.5), inset 0 0 10px rgba(0, 255, 204, 0.2) !important;
   background: repeating-linear-gradient(
     45deg,
     rgba(0, 20, 16, 0.95),
@@ -72,39 +150,24 @@
   100% { filter: drop-shadow(1px 0 2px rgba(255, 0, 100, 0.4)) drop-shadow(-1px 0 2px rgba(0, 255, 204, 0.6)); }
 }
 
-/* Core Compass Gyroscope Ring */
-.astrolabe-gyro-ring {
-  position: absolute;
-  inset: -6px;
-  border-radius: 50%;
-  border: 1px dashed var(--deity-accent, #39ff14);
-  opacity: 0.45;
-  pointer-events: none;
-  animation: gyro-rotate 120s linear infinite;
-}
-
-@keyframes gyro-rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
 /* Core Label Typography */
 .astrolabe-dial-layer-code {
-  font-family: 'TemplateGothic', ui-monospace, monospace;
-  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.1em;
   color: var(--deity-accent, #39ff14);
   line-height: 1;
+  margin-top: 2px;
 }
 
 .astrolabe-dial-node-tag {
   font-family: ui-monospace, monospace;
-  font-size: 8px;
+  font-size: 7.5px;
   color: #fff;
-  opacity: 0.8;
+  opacity: 0.75;
   letter-spacing: 0.05em;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 /* SVG Circuit Trace Canvas */
@@ -141,13 +204,13 @@
 }
 
 .astrolabe-macro-button {
-  width: 26px;
-  height: 26px;
-  font-size: 10px;
+  width: 28px;
+  height: 28px;
+  font-size: 11px;
 }
 
 .astrolabe-nav-button {
-  width: 30px;
-  height: 30px;
-  font-size: 12px;
+  width: 32px;
+  height: 32px;
+  font-size: 13px;
 }

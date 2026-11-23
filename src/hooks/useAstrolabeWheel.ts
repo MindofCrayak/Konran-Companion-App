@@ -17,11 +17,13 @@ interface UseAstrolabeWheelProps {
   totalNodesOnLayer: number;
   preferences: WheelPreferences;
   wayfinderHistory?: WayfinderItem[];
+  isZoomLocked?: boolean;
   onLayerChange: (newLayer: number) => void;
   onNodeChange: (newNodeIndex: number) => void;
   onActivateNode: () => void;
   onExecuteMacro: (macroId: string) => void;
   onSelectWayfinder?: (item: WayfinderItem) => void;
+  onZoomStep?: (direction: 1 | -1) => void;
 }
 
 export function useAstrolabeWheel({
@@ -32,15 +34,18 @@ export function useAstrolabeWheel({
   totalNodesOnLayer,
   preferences,
   wayfinderHistory = [],
+  isZoomLocked = false,
   onLayerChange,
   onNodeChange,
   onActivateNode,
   onExecuteMacro,
   onSelectWayfinder,
+  onZoomStep,
 }: UseAstrolabeWheelProps) {
   const [ringState, setRingState] = useState<MenuRingState>('collapsed');
   const [isGhost, setIsGhost] = useState(false);
   const [highlightedButton, setHighlightedButton] = useState<string | null>(null);
+  const [rotaryAngle, setRotaryAngle] = useState(0);
 
   // Timers for 2-stage idle dormancy
   const stage1TimerRef = useRef<number | null>(null);
@@ -288,48 +293,36 @@ export function useAstrolabeWheel({
         return;
       }
 
-      // Axis Locking: First axis past 10px locks the scrubbing gesture
-      if (!axisLockRef.current && dist > 10) {
-        if (Math.abs(dx) > Math.abs(dy)) {
-          axisLockRef.current = 'horizontal';
-        } else {
-          axisLockRef.current = 'vertical';
-        }
-      }
+      // Update knurled rotary ring spin
+      setRotaryAngle((prev) => (prev + (e.movementX + e.movementY * 0.5) * 1.8) % 360);
 
-      const stepThreshold = 24 / preferences.scale;
+      const stepThreshold = 22 / preferences.scale;
 
-      // Vertical drag (locked or primary): Step through OS layers
-      if (axisLockRef.current === 'vertical' || (!axisLockRef.current && Math.abs(dy) > Math.abs(dx))) {
-        accumulatedDeltaRef.current.y += e.movementY;
-        if (Math.abs(accumulatedDeltaRef.current.y) >= stepThreshold) {
-          const direction = accumulatedDeltaRef.current.y < 0 ? 1 : -1;
-          const nextLayer = currentLayerIndex + direction;
-
-          if (nextLayer >= minLayerIndex && nextLayer <= maxLayerIndex) {
-            onLayerChange(nextLayer);
-            if (nextLayer === -1) {
-              playSubstrateShift();
-            } else {
-              playDetentTick(nextLayer);
-            }
-          }
-          accumulatedDeltaRef.current.y = 0;
-        }
-      }
-
-      // Horizontal drag (locked or primary): Cycle through nodes on active layer
-      if (axisLockRef.current === 'horizontal' || (!axisLockRef.current && Math.abs(dx) >= Math.abs(dy))) {
-        accumulatedDeltaRef.current.x += e.movementX;
+      // Zoom-Lock Mode: Scrubbing smoothly steps camera zoom across Z-Depth
+      if (isZoomLocked) {
+        accumulatedDeltaRef.current.x += (e.movementX - e.movementY);
         if (Math.abs(accumulatedDeltaRef.current.x) >= stepThreshold) {
-          if (totalNodesOnLayer > 1) {
-            const direction = accumulatedDeltaRef.current.x > 0 ? 1 : -1;
-            const nextNode = (currentNodeIndex + direction + totalNodesOnLayer) % totalNodesOnLayer;
-            onNodeChange(nextNode);
-            playDetentTick(nextNode);
-          }
+          const direction: 1 | -1 = accumulatedDeltaRef.current.x > 0 ? 1 : -1;
+          onZoomStep?.(direction);
+          playDetentTick(direction === 1 ? 2 : 0);
+          triggerHaptic(14);
           accumulatedDeltaRef.current.x = 0;
         }
+        return;
+      }
+
+      // Single-Touch Scrubbing (Horizontal Only — No Accidental Layer Jumps)
+      // Moving thumb across wheel strictly cycles through nodes on active layer
+      accumulatedDeltaRef.current.x += e.movementX;
+      if (Math.abs(accumulatedDeltaRef.current.x) >= stepThreshold) {
+        if (totalNodesOnLayer > 1) {
+          const direction = accumulatedDeltaRef.current.x > 0 ? 1 : -1;
+          const nextNode = (currentNodeIndex + direction + totalNodesOnLayer) % totalNodesOnLayer;
+          onNodeChange(nextNode);
+          playDetentTick(nextNode);
+          triggerHaptic(8);
+        }
+        accumulatedDeltaRef.current.x = 0;
       }
     },
     [
@@ -337,10 +330,8 @@ export function useAstrolabeWheel({
       getButtonAtAngle,
       resetDormancyTimers,
       preferences.scale,
-      currentLayerIndex,
-      minLayerIndex,
-      maxLayerIndex,
-      onLayerChange,
+      isZoomLocked,
+      onZoomStep,
       totalNodesOnLayer,
       currentNodeIndex,
       onNodeChange,
@@ -426,6 +417,7 @@ export function useAstrolabeWheel({
     ringState,
     isGhost,
     highlightedButton,
+    rotaryAngle,
     collapseRing,
     wakeFromGhost,
     handleButtonExecute,

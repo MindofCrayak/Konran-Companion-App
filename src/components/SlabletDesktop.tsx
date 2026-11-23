@@ -60,7 +60,7 @@ import { OSCalibrationPanel } from './OSCalibrationPanel';
 import { CoreNetMatrixOverlay } from './CoreNetMatrixOverlay';
 import { MurderBoardLayer } from './MurderBoardLayer';
 import { OSTutorialOverlay } from './OSTutorialOverlay';
-import { DEFAULT_ANCHORED_LAYERS, OSLayer, OSNode, ZDepthTier, WayfinderItem } from '../types/slabletOS';
+import { DEFAULT_ANCHORED_LAYERS, OSLayer, OSNode, ZDepthTier, WayfinderItem, GlobePin, SolarBody } from '../types/slabletOS';
 import { INITIAL_OS_NODES } from '../data/osNodesData';
 import { CanvasWindowState, TerminalWindowType } from '../types';
 import './SlabletDesktop.css';
@@ -459,6 +459,55 @@ export const SlabletDesktop = ({
     showSystemNotice('NODES ARRANGED // DIAGONAL CASCADE APPLIED');
   };
 
+  // Spyglass Zoom Lock State & Wheel Zoom Scrubbing
+  const [isZoomLocked, setIsZoomLocked] = useState(false);
+
+  const toggleZoomLock = useCallback(() => {
+    setIsZoomLocked((prev) => {
+      const next = !prev;
+      playOptionSelect();
+      triggerHaptic(next ? [15, 20] : 10);
+      showSystemNotice(next ? 'SPYGLASS // ZOOM LOCK ENGAGED' : 'SPYGLASS // ZOOM LOCK RELEASED');
+      return next;
+    });
+  }, [showSystemNotice]);
+
+  const stepZTier = useCallback((direction: 1 | -1) => {
+    setZTier((prev) => {
+      let next: ZDepthTier = prev;
+      if (direction === 1) {
+        next = prev === 'surface' ? 'planet' : 'system';
+      } else {
+        next = prev === 'system' ? 'planet' : 'surface';
+      }
+      if (next !== prev) {
+        const stepIdx = next === 'surface' ? 0 : next === 'planet' ? 1 : 2;
+        playDetentTick(stepIdx);
+        triggerHaptic([12, 16]);
+        showSystemNotice(`SPYGLASS ZOOM // ${next.toUpperCase()} VIEW`);
+      }
+      return next;
+    });
+  }, [showSystemNotice]);
+
+  // Raycast Click on 3D Globe Pin: Open LegendKeeper Wiki Lore Window
+  const handleGlobePinClick = useCallback((pin: GlobePin) => {
+    playOptionSelect();
+    triggerHaptic(18);
+    const windowTitle = `${pin.name} // ${pin.tier.toUpperCase()}`;
+    launchWindow('lore-atlas', windowTitle, pin.iconColor || '#38bdf8');
+    showSystemNotice(`LORE ARCHIVE // ACCESSED ${pin.name.toUpperCase()}`);
+  }, [launchWindow, showSystemNotice]);
+
+  // Raycast Click on 3D Solar System Plane or Moon: Open Lore Window
+  const handleCelestialBodyClick = useCallback((body: SolarBody) => {
+    playOptionSelect();
+    triggerHaptic(18);
+    const windowTitle = `${body.name} // CELESTIAL PLANE`;
+    launchWindow('lore-atlas', windowTitle, body.color);
+    showSystemNotice(`CELESTIAL RADAR // LOCK-ON ${body.name.toUpperCase()}`);
+  }, [launchWindow, showSystemNotice]);
+
   // Reset to default configuration
   const resetWindows = () => {
     playKeyClick();
@@ -830,20 +879,6 @@ export const SlabletDesktop = ({
             </span>
           </div>
 
-          {/* 3-Tier Z-Depth Spyglass / Telescope Toggle */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              cycleZTier();
-            }}
-            className="flex items-center gap-1 px-2 py-0.5 rounded border border-[#38bdf8]/60 bg-black/70 hover:border-[#38bdf8] text-[9.5px] font-mono text-[#38bdf8] hover:text-white cursor-pointer transition-colors shadow-[0_0_8px_rgba(56,189,248,0.25)]"
-            title="Toggle Z-Depth Spatial Scale (Surface / Planet Orbit / Solar System)"
-          >
-            <Eye className="w-3 h-3 text-[#38bdf8]" />
-            <span className="font-bold tracking-wider">🔭 SPYGLASS [{zTier.toUpperCase()}]</span>
-          </button>
-
           <button
             type="button"
             onClick={(e) => {
@@ -882,7 +917,10 @@ export const SlabletDesktop = ({
             onGlobeClick={() => {
               playOptionSelect();
               cycleZTier();
-            }} 
+            }}
+            onZTierChange={setZTier}
+            onPinClick={handleGlobePinClick}
+            onCelestialBodyClick={handleCelestialBodyClick}
           />
 
           {/* Sacred Celestial Astrolabe Dynamic Kinetic Mandala Circuitry (Adapts to Active Nyne Color) */}
@@ -1386,176 +1424,6 @@ export const SlabletDesktop = ({
         {notice && <div className="slablet-notice" role="status">{notice}</div>}
       </section>
 
-      {/* 3. BOTTOM MENU RIBBON FOOTER (Strictly 30px height) */}
-      <footer className="slablet-footer" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-2 sm:gap-4 text-[10px] font-mono text-[var(--patron-primary)]">
-          <div className="flex items-center gap-1.5">
-            <Compass className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-            <span className="text-white/60 hidden sm:inline">PLANETARY FIX:</span>
-            <strong className="text-[var(--patron-bus)]">47° 12′ N / 08° 44′ E</strong>
-          </div>
-          <span className="hidden md:inline text-white/20">|</span>
-          <div className="hidden md:flex items-center gap-3 text-white/70">
-            <span className="flex items-center gap-1"><i className="moon-dot moon-dot--amber" /> Olysphere</span>
-            <span className="flex items-center gap-1"><i className="moon-dot moon-dot--violet" /> Ayanath</span>
-          </div>
-        </div>
-
-        {/* Quick Launch Console Micro-Pills */}
-        <div className="hidden md:flex items-center gap-1.5">
-          <button 
-            className="slablet-micro-pill" 
-            onClick={() => {
-              playKeyClick();
-              launchWindow('character-sheet', '5.5e Sheet, Inventory & Clergy');
-            }}
-            title="5.5e Sheet & Inventory"
-          >
-            <CircleUserRound className="w-3 h-3 text-[var(--patron-primary)]" />
-            <span>Sheet</span>
-          </button>
-
-          <button 
-            className="slablet-micro-pill" 
-            onClick={() => {
-              playKeyClick();
-              if (onOpenFatedQuestionnaireModal) onOpenFatedQuestionnaireModal();
-              else launchWindow('fated-questionnaire', 'Questionnaire of the Fated');
-            }}
-            title="Questionnaire of the Fated"
-          >
-            <Sparkles className="w-3 h-3 text-[#ffcc00]" />
-            <span>Fated</span>
-          </button>
-
-          <button 
-            className="slablet-micro-pill" 
-            onClick={() => {
-              playKeyClick();
-              if (onOpenKAMPSortingModal) onOpenKAMPSortingModal();
-              else launchWindow('kamp-quiz', 'K.A.M.P. Sorting Evaluation');
-            }}
-            title="K.A.M.P. Sorting Quiz"
-          >
-            <GraduationCap className="w-3 h-3 text-[#39ff14]" />
-            <span>K.A.M.P.</span>
-          </button>
-
-          <button 
-            className="slablet-micro-pill" 
-            onClick={() => {
-              playKeyClick();
-              if (onOpenKAMPKodexModal) onOpenKAMPKodexModal();
-              else launchWindow('kamp', 'The K.A.M.P. Kodex');
-            }}
-            title="The K.A.M.P. Kodex"
-          >
-            <BookOpen className="w-3 h-3 text-[#f87171]" />
-            <span>Kodex</span>
-          </button>
-
-          <button 
-            className="slablet-micro-pill" 
-            onClick={() => {
-              playKeyClick();
-              launchWindow('codex', 'Pantheon Codex');
-            }}
-            title="Pantheon Codex"
-          >
-            <BookOpen className="w-3 h-3 text-[#a78bfa]" />
-            <span>Pantheon</span>
-          </button>
-
-          <button 
-            className="slablet-micro-pill" 
-            onClick={() => {
-              playKeyClick();
-              launchWindow('reputation', 'Faction Standings Ledger');
-            }}
-            title="Standings Ledger"
-          >
-            <Shield className="w-3 h-3 text-[#34d399]" />
-            <span>Standings</span>
-          </button>
-
-          <button 
-            className="slablet-micro-pill" 
-            onClick={() => {
-              playKeyClick();
-              launchWindow('lore-atlas', 'Grand Codex & Atlas // LegendKeeper Live', '#ffd700');
-            }}
-            title="LegendKeeper Live Lore Atlas"
-          >
-            <Compass className="w-3 h-3 text-[#ffd700]" />
-            <span>Atlas</span>
-          </button>
-
-          {/* Dedicated Spyglass / Telescope Z-Depth Tier Toggle */}
-          <button 
-            className={`slablet-micro-pill ${zTier !== 'planet' ? 'border-[#38bdf8] text-[#38bdf8] bg-[#38bdf8]/10' : ''}`} 
-            onClick={() => {
-              cycleZTier();
-            }}
-            title={`Spyglass Z-Depth View: ${zTier.toUpperCase()} (Click to cycle World Surface / Planet Orbit / Solar System)`}
-          >
-            <Eye className="w-3 h-3 text-[#38bdf8]" />
-            <span>🔭 {zTier === 'surface' ? 'Surface' : zTier === 'system' ? 'System' : 'Orbit'}</span>
-          </button>
-
-          <button 
-            className="slablet-micro-pill" 
-            onClick={() => {
-              playKeyClick();
-              launchWindow('custom', 'OS & Astrolabe Calibration', '#39ff14');
-            }}
-            title="Configure Astrolabe Scale, Spacing & Macro Slots"
-          >
-            <span>Dial</span>
-          </button>
-
-          <button 
-            className="slablet-micro-pill slablet-micro-pill--accent" 
-            onClick={() => {
-              playKeyClick();
-              launchWindow('custom', 'Field Terminal', '#39ff14');
-            }}
-            title="New Terminal Node"
-          >
-            <Plus className="w-3 h-3" />
-            <span>+ Node</span>
-          </button>
-        </div>
-
-        {/* Mobile Micro-Pills */}
-        <div className="flex md:hidden items-center gap-1.5">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              cycleZTier();
-            }}
-            className="flex items-center gap-1 px-2 py-0.5 rounded bg-black/60 border border-[#38bdf8]/50 text-[#38bdf8] text-[9.5px] font-mono cursor-pointer"
-            title="Cycle Z-Depth Spyglass"
-          >
-            <Eye className="w-2.5 h-2.5" />
-            <span>{zTier.toUpperCase()}</span>
-          </button>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              playKeyClick();
-              const rect = e.currentTarget.getBoundingClientRect();
-              setRadialMenuPos({ x: Math.max(10, rect.left - 180), y: Math.max(50, rect.top - 240) });
-            }}
-            className="flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--patron-primary)]/15 border border-[var(--patron-primary)]/60 text-[var(--patron-primary)] text-[10px] font-mono cursor-pointer"
-            title="Open Terminals Access Hub"
-          >
-            <Sparkles className="w-2.5 h-2.5 text-[#ffcc00]" />
-            <span className="font-bold tracking-wider">TERMINALS [{openWindows.length}]</span>
-          </button>
-        </div>
-      </footer>
-
       {/* Dynamic Astrolabe Click-Wheel Radial Controller */}
       <AstrolabeController
         currentLayer={currentLayer}
@@ -1568,6 +1436,8 @@ export const SlabletDesktop = ({
         preferences={wheelPreferences}
         deityColor={currentLayerIndex === -1 ? '#00ffcc' : (activePatronPalette?.primaryHex || '#39ff14')}
         wayfinderHistory={wayfinderHistory}
+        zTier={zTier}
+        isZoomLocked={isZoomLocked}
         onLayerChange={(l) => {
           setCurrentLayerIndex(l);
           setCurrentNodeIndex(0);
@@ -1580,6 +1450,9 @@ export const SlabletDesktop = ({
           setCurrentLayerIndex(item.layerIndex);
           focusWindow(item.id);
         }}
+        onCycleZTier={cycleZTier}
+        onToggleZoomLock={toggleZoomLock}
+        onZoomStep={stepZTier}
       />
 
       {/* 4-Step Interactive Onboarding Tutorial */}

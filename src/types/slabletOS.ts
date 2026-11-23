@@ -55,10 +55,34 @@ export interface OSNode {
   badgeText?: string;
 }
 
+export interface SolarBodyMoon {
+  name: string;
+  color: string;
+  size: number;
+  orbitDistance: number;
+  orbitSpeed: number;
+}
+
+export interface GlobePin {
+  id: string;
+  name: string;
+  tier: 'province' | 'city' | 'landmark';
+  parentId?: string;
+  parentResourceId?: string;
+  resourceId?: string;
+  lat: number;
+  lng: number;
+  pos?: [number, number]; // 2D LK coordinates [0..1]
+  iconGlyph?: string;
+  iconColor?: string;
+  articleUrl?: string;
+  isCapital?: boolean;
+}
+
 export interface SolarBody {
   id: string;
   name: string;
-  type: 'sun' | 'planet' | 'moon' | 'twin_planet';
+  type: 'sun' | 'planet' | 'moon' | 'twin_planet' | 'binary_half';
   deityId?: string;
   orbitRadius: number;
   orbitSpeed: number;
@@ -72,6 +96,9 @@ export interface SolarBody {
   badgeCount?: number;
   twinTargetId?: string; // For the torn twin-planet on dual reverse orbit
   twinDistance?: number;
+  visualStyle?: 'filaments' | 'mushroom_basin' | 'volcanic_dust' | 'aerial_islands' | 'dragon_eye' | 'rainforest_spouts' | 'greco_roman' | 'purple_mist' | 'brain_lobes';
+  moons?: SolarBodyMoon[];
+  legendKeeperResourceId?: string;
 }
 
 export interface WayfinderItem {

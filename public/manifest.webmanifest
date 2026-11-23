@@ -1,0 +1,27 @@
+{
+  "name": "Konran Companion App // Slablet MK IV",
+  "short_name": "Konran Slablet",
+  "description": "ObsydianHeart Slablet MK IV - Crystalpunk Spatial OS & Companion App for the Konran Universe",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "orientation": "any",
+  "categories": ["entertainment", "games", "utilities"],
+  "icons": [
+    {
+      "src": "https://i.imgur.com/rbA1bPE.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://i.imgur.com/rbA1bPE.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
