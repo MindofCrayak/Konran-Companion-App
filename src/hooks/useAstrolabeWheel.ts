@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { MenuRingState, WheelPreferences } from '../types/slabletOS';
+import { MenuRingState, WheelPreferences, WayfinderItem } from '../types/slabletOS';
 import {
   playDetentTick,
   playArcUnfold,
   playSubstrateShift,
   playGhostWake,
   playMacroSelect,
+  triggerHaptic,
 } from '../utils/audio';
 
 interface UseAstrolabeWheelProps {
@@ -15,10 +16,12 @@ interface UseAstrolabeWheelProps {
   currentNodeIndex: number;
   totalNodesOnLayer: number;
   preferences: WheelPreferences;
+  wayfinderHistory?: WayfinderItem[];
   onLayerChange: (newLayer: number) => void;
   onNodeChange: (newNodeIndex: number) => void;
   onActivateNode: () => void;
   onExecuteMacro: (macroId: string) => void;
+  onSelectWayfinder?: (item: WayfinderItem) => void;
 }
 
 export function useAstrolabeWheel({
@@ -28,10 +31,12 @@ export function useAstrolabeWheel({
   currentNodeIndex,
   totalNodesOnLayer,
   preferences,
+  wayfinderHistory = [],
   onLayerChange,
   onNodeChange,
   onActivateNode,
   onExecuteMacro,
+  onSelectWayfinder,
 }: UseAstrolabeWheelProps) {
   const [ringState, setRingState] = useState<MenuRingState>('collapsed');
   const [isGhost, setIsGhost] = useState(false);
@@ -53,6 +58,10 @@ export function useAstrolabeWheel({
   const accumulatedDeltaRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const centerPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const holdTimeoutRef = useRef<number | null>(null);
+  const longPressHomeTimeoutRef = useRef<number | null>(null);
+
+  // Axis Locking: First axis past threshold locks direction until pointer release
+  const axisLockRef = useRef<'horizontal' | 'vertical' | null>(null);
 
   const resetDormancyTimers = useCallback(() => {
     if (stage1TimerRef.current) window.clearTimeout(stage1TimerRef.current);
@@ -94,6 +103,7 @@ export function useAstrolabeWheel({
       if (stage2TimerRef.current) window.clearTimeout(stage2TimerRef.current);
       if (tapTimeoutRef.current) window.clearTimeout(tapTimeoutRef.current);
       if (holdTimeoutRef.current) window.clearTimeout(holdTimeoutRef.current);
+      if (longPressHomeTimeoutRef.current) window.clearTimeout(longPressHomeTimeoutRef.current);
     };
   }, [resetDormancyTimers]);
 
@@ -113,40 +123,48 @@ export function useAstrolabeWheel({
       let angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
 
       if (state === 'inner-x2') {
-        if (dist < innerArcMin * 0.75) return 'center';
         if (dist >= innerArcMin && dist <= innerArcMax) {
-          // Inner 3 buttons: Up (top), Center (middle), Down (bottom)
+          // Inner 3 buttons: Up (top), Center (neutral), Down (bottom)
           if (preferences.handedness === 'left') {
-            // Left mode: quadrant from -90° (up) to 0° (right)
             if (angleDeg < -55) return 'up';
-            if (angleDeg >= -55 && angleDeg < -20) return 'center';
+            if (angleDeg >= -55 && angleDeg < -20) return 'center-neutral';
             return 'down';
           } else {
-            // Right mode: quadrant from -90° (up) to -180° (left)
             if (angleDeg > -125) return 'up';
-            if (angleDeg <= -125 && angleDeg > -160) return 'center';
+            if (angleDeg <= -125 && angleDeg > -160) return 'center-neutral';
             return 'down';
           }
         }
       } else if (state === 'outer-x3') {
         if (dist >= outerArcMin && dist <= outerArcMax) {
           // Outer 7 macro slots
-          const spread = 90; // degrees total span
+          const spread = 90;
           const startAngle = preferences.handedness === 'left' ? -90 : -90 - spread;
-          const relAngle = preferences.handedness === 'left' 
-            ? angleDeg - startAngle 
-            : angleDeg - startAngle;
-
+          const relAngle = angleDeg - startAngle;
           const slotSize = spread / 7;
           const slotIndex = Math.floor(Math.abs(relAngle) / slotSize);
           if (slotIndex >= 0 && slotIndex < 7) {
             return `macro-${preferences.macros[slotIndex]?.id || slotIndex}`;
           }
         }
+      } else if (state === 'wayfinder') {
+        if (dist >= innerArcMin && dist <= outerArcMax) {
+          // Wayfinder arc: Home + up to 3 recent items
+          const itemsCount = Math.min(4, 1 + wayfinderHistory.length);
+          const spread = 80;
+          const startAngle = preferences.handedness === 'left' ? -90 : -90 - spread;
+          const relAngle = angleDeg - startAngle;
+          const slotSize = spread / itemsCount;
+          const slotIndex = Math.floor(Math.abs(relAngle) / slotSize);
+          if (slotIndex === 0) return 'wayfinder-home';
+          if (slotIndex > 0 && slotIndex <= wayfinderHistory.length) {
+            return `wayfinder-${wayfinderHistory[slotIndex - 1].id}`;
+          }
+        }
       }
       return null;
     },
-    [preferences]
+    [preferences, wayfinderHistory]
   );
 
   // Execute button action
@@ -168,9 +186,20 @@ export function useAstrolabeWheel({
             playDetentTick(next);
           }
         }
-      } else if (btn === 'center') {
+      } else if (btn === 'center-neutral') {
+        // Neutral safe slot — strictly no action to prevent accidental triggers
+        return;
+      } else if (btn === 'wayfinder-home') {
         playMacroSelect();
-        onActivateNode();
+        onLayerChange(3); // Snap to User Home (3)
+        triggerHaptic([14, 20]);
+      } else if (btn.startsWith('wayfinder-')) {
+        const id = btn.replace('wayfinder-', '');
+        const item = wayfinderHistory.find((w) => w.id === id);
+        if (item) {
+          playMacroSelect();
+          onSelectWayfinder?.(item);
+        }
       } else if (btn.startsWith('macro-')) {
         const macroId = btn.replace('macro-', '');
         playMacroSelect();
@@ -186,8 +215,9 @@ export function useAstrolabeWheel({
       maxLayerIndex,
       minLayerIndex,
       onLayerChange,
-      onActivateNode,
       onExecuteMacro,
+      onSelectWayfinder,
+      wayfinderHistory,
       resetDormancyTimers,
     ]
   );
@@ -211,16 +241,32 @@ export function useAstrolabeWheel({
       accumulatedDeltaRef.current = { x: 0, y: 0 };
       isDraggingRef.current = false;
       isHoldingRef.current = false;
+      axisLockRef.current = null;
 
-      // Check if held down for hold-drag
+      // Single-Tap + Hold (~320ms): Open Wayfinder / History Radial
       holdTimeoutRef.current = window.setTimeout(() => {
-        isHoldingRef.current = true;
-      }, 260);
+        if (!isDraggingRef.current) {
+          isHoldingRef.current = true;
+          setRingState('wayfinder');
+          playArcUnfold(false);
+          triggerHaptic(18);
+        }
+      }, 320);
+
+      // Long-Press Center (>750ms without moving): Snap straight to User Home (3)
+      longPressHomeTimeoutRef.current = window.setTimeout(() => {
+        if (!isDraggingRef.current) {
+          onLayerChange(3);
+          playSubstrateShift();
+          triggerHaptic([20, 20, 25]);
+          setRingState('collapsed');
+        }
+      }, 750);
     },
-    [wakeFromGhost]
+    [wakeFromGhost, onLayerChange]
   );
 
-  // Pointer Move (Scrubbing or Arc Drag-Highlight)
+  // Pointer Move (Scrubbing with Axis Locking or Arc Drag-Highlight)
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
       const dx = e.clientX - startPosRef.current.x;
@@ -229,48 +275,61 @@ export function useAstrolabeWheel({
 
       if (dist > 8) {
         isDraggingRef.current = true;
+        if (holdTimeoutRef.current) window.clearTimeout(holdTimeoutRef.current);
+        if (longPressHomeTimeoutRef.current) window.clearTimeout(longPressHomeTimeoutRef.current);
       }
 
       resetDormancyTimers();
 
-      // If in x2 or x3 mode: calculate highlighted button for Hold + Drag
+      // If in x2, x3 or wayfinder mode: calculate highlighted button for Hold + Drag
       if (ringState !== 'collapsed') {
         const hovered = getButtonAtAngle(e.clientX, e.clientY, ringState);
         setHighlightedButton(hovered);
         return;
       }
 
-      // If collapsed: Single-Touch Scrubbing along axes
-      accumulatedDeltaRef.current.x += e.movementX;
-      accumulatedDeltaRef.current.y += e.movementY;
-
-      const stepThreshold = 26 / preferences.scale;
-
-      // Vertical drag: Linear step through OS Layers
-      if (Math.abs(accumulatedDeltaRef.current.y) >= stepThreshold) {
-        const direction = accumulatedDeltaRef.current.y < 0 ? 1 : -1;
-        const nextLayer = currentLayerIndex + direction;
-
-        if (nextLayer >= minLayerIndex && nextLayer <= maxLayerIndex) {
-          onLayerChange(nextLayer);
-          if (nextLayer === -1) {
-            playSubstrateShift();
-          } else {
-            playDetentTick(nextLayer);
-          }
+      // Axis Locking: First axis past 10px locks the scrubbing gesture
+      if (!axisLockRef.current && dist > 10) {
+        if (Math.abs(dx) > Math.abs(dy)) {
+          axisLockRef.current = 'horizontal';
+        } else {
+          axisLockRef.current = 'vertical';
         }
-        accumulatedDeltaRef.current.y = 0;
       }
 
-      // Horizontal drag: Cycle through nodes on active layer
-      if (Math.abs(accumulatedDeltaRef.current.x) >= stepThreshold) {
-        if (totalNodesOnLayer > 1) {
-          const direction = accumulatedDeltaRef.current.x > 0 ? 1 : -1;
-          const nextNode = (currentNodeIndex + direction + totalNodesOnLayer) % totalNodesOnLayer;
-          onNodeChange(nextNode);
-          playDetentTick(nextNode);
+      const stepThreshold = 24 / preferences.scale;
+
+      // Vertical drag (locked or primary): Step through OS layers
+      if (axisLockRef.current === 'vertical' || (!axisLockRef.current && Math.abs(dy) > Math.abs(dx))) {
+        accumulatedDeltaRef.current.y += e.movementY;
+        if (Math.abs(accumulatedDeltaRef.current.y) >= stepThreshold) {
+          const direction = accumulatedDeltaRef.current.y < 0 ? 1 : -1;
+          const nextLayer = currentLayerIndex + direction;
+
+          if (nextLayer >= minLayerIndex && nextLayer <= maxLayerIndex) {
+            onLayerChange(nextLayer);
+            if (nextLayer === -1) {
+              playSubstrateShift();
+            } else {
+              playDetentTick(nextLayer);
+            }
+          }
+          accumulatedDeltaRef.current.y = 0;
         }
-        accumulatedDeltaRef.current.x = 0;
+      }
+
+      // Horizontal drag (locked or primary): Cycle through nodes on active layer
+      if (axisLockRef.current === 'horizontal' || (!axisLockRef.current && Math.abs(dx) >= Math.abs(dy))) {
+        accumulatedDeltaRef.current.x += e.movementX;
+        if (Math.abs(accumulatedDeltaRef.current.x) >= stepThreshold) {
+          if (totalNodesOnLayer > 1) {
+            const direction = accumulatedDeltaRef.current.x > 0 ? 1 : -1;
+            const nextNode = (currentNodeIndex + direction + totalNodesOnLayer) % totalNodesOnLayer;
+            onNodeChange(nextNode);
+            playDetentTick(nextNode);
+          }
+          accumulatedDeltaRef.current.x = 0;
+        }
       }
     },
     [
@@ -290,27 +349,27 @@ export function useAstrolabeWheel({
 
   // Pointer Up (Tap detection & Release)
   const handlePointerUp = useCallback(
-    (e: React.PointerEvent) => {
-      if (holdTimeoutRef.current) {
-        window.clearTimeout(holdTimeoutRef.current);
-      }
+    () => {
+      if (holdTimeoutRef.current) window.clearTimeout(holdTimeoutRef.current);
+      if (longPressHomeTimeoutRef.current) window.clearTimeout(longPressHomeTimeoutRef.current);
 
       const wasDragging = isDraggingRef.current;
       const wasHolding = isHoldingRef.current;
+      axisLockRef.current = null;
 
-      // If we were holding + highlighting an expanded arc button, execute it on release
+      // If holding/dragging an expanded arc button, execute on release
       if (ringState !== 'collapsed' && (wasHolding || wasDragging) && highlightedButton) {
         handleButtonExecute(highlightedButton);
         return;
       }
 
-      // If not dragging significantly, register a tap
+      // If not dragging significantly, handle snappy tap detection (~180ms - 220ms window)
       if (!wasDragging) {
         const now = Date.now();
         const timeSinceLastTap = now - lastTapTimeRef.current;
         lastTapTimeRef.current = now;
 
-        if (timeSinceLastTap < 340) {
+        if (timeSinceLastTap < 320) {
           tapCountRef.current += 1;
         } else {
           tapCountRef.current = 1;
@@ -335,7 +394,7 @@ export function useAstrolabeWheel({
               onActivateNode();
             }
           } else if (count === 2) {
-            // Double Tap (x2): Open inner Up / Center / Down arc
+            // Double Tap (x2): Open inner Up / Neutral / Down arc
             setRingState((prev) => (prev === 'inner-x2' ? 'collapsed' : 'inner-x2'));
             playArcUnfold(false);
           } else if (count >= 3) {
@@ -343,7 +402,7 @@ export function useAstrolabeWheel({
             setRingState((prev) => (prev === 'outer-x3' ? 'collapsed' : 'outer-x3'));
             playArcUnfold(true);
           }
-        }, 220);
+        }, 190);
       }
 
       resetDormancyTimers();

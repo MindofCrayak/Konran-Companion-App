@@ -315,6 +315,12 @@ export interface CanvasWindowState {
   id: string;
   title: string;
   type: TerminalWindowType;
+  layerIndex?: number;
+  isPinned?: boolean;
+  isHidden?: boolean;
+  minClearance?: number;
+  isMasked?: boolean;
+  maskedDecoyType?: 'blank' | 'penthouse' | 'clearance_seal';
   isOpen: boolean;
   isMinimized: boolean;
   isMaximized: boolean;
@@ -326,6 +332,8 @@ export interface CanvasWindowState {
     terminalName?: string;
     commandLog?: string[];
     notesText?: string;
+    clusterId?: string;
+    masterNodeId?: string;
   };
 }
 

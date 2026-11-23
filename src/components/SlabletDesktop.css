@@ -382,3 +382,41 @@
   .slablet-status-light { animation: none; }
   .slablet-module { transition: none; }
 }
+
+/* Dynamic OS Layer Themes */
+.slablet-desktop.slablet-theme-corenet {
+  background: radial-gradient(circle at 50% 50%, #2e1065 0%, #0d041a 100%) !important;
+  --patron-primary: #fbbf24;
+  --slablet-primary: #fbbf24;
+  --slablet-glow: rgba(251, 191, 36, 0.35);
+}
+
+.slablet-desktop.slablet-theme-lilac {
+  background: radial-gradient(circle at 50% 50%, #150a24 0%, #06020c 100%) !important;
+  --patron-primary: #c084fc;
+  --slablet-primary: #c084fc;
+  --slablet-glow: rgba(192, 132, 252, 0.35);
+}
+
+.slablet-desktop.slablet-theme-eink {
+  background: #f4f1ea !important;
+  color: #1c1917 !important;
+  --patron-primary: #1c1917;
+  --slablet-primary: #1c1917;
+  --slablet-glow: rgba(0, 0, 0, 0.2);
+}
+
+.slablet-desktop.slablet-theme-fallout {
+  background: radial-gradient(circle at 50% 50%, #141c10 0%, #040905 100%) !important;
+  --patron-primary: #ffaa00;
+  --slablet-primary: #ffaa00;
+  --slablet-glow: rgba(255, 170, 0, 0.35);
+}
+
+.slablet-desktop.slablet-theme-campaign {
+  background: radial-gradient(circle at 50% 50%, #081d29 0%, #02070c 100%) !important;
+  --patron-primary: #38bdf8;
+  --slablet-primary: #38bdf8;
+  --slablet-glow: rgba(56, 189, 248, 0.35);
+}
+

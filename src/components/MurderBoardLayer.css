@@ -1,0 +1,32 @@
+/* Murder Board Layer Styles */
+
+.murder-board-root {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  overflow: hidden;
+}
+
+.murder-board-note {
+  position: absolute;
+  padding: 8px 10px;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  transform: rotate(-1.5deg);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  user-select: text;
+}
+
+.murder-board-note:nth-child(even) {
+  transform: rotate(1.2deg);
+}
+
+.murder-board-note:hover {
+  transform: scale(1.04) rotate(0deg);
+  z-index: 25 !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+}
+
+.murder-board-note--pinned {
+  border-top: 3px solid #b91c1c;
+}

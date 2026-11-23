@@ -1,0 +1,37 @@
+/* CoreNet Matrix Overlay (Layer -1: Deep Plum & Glowing Gold Matrix) */
+
+.corenet-matrix-root {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.corenet-plum-backdrop {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(46, 16, 101, 0.92) 0%, rgba(20, 5, 45, 0.98) 100%);
+  mix-blend-mode: multiply;
+}
+
+.corenet-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.85;
+}
+
+.corenet-grid-scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(251, 191, 36, 0.03) 0px,
+    rgba(251, 191, 36, 0.03) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  pointer-events: none;
+}

@@ -127,16 +127,41 @@ When answering user queries or generating content, adhere strictly to these cano
 ### D. Spatial OS Architecture (Slablet MK IV)
 * **Astrolabe Radial Click-Wheel:**
   * Compact gyroscopic dial anchored to bottom-left/right corner (scales from 41.6px ghost lens to 64px active).
-  * Double-tap (`x2`): Expands inner navigation arc with discrete `Up`, `Select`, `Down` controls.
-  * Triple-tap (`x3`): Expands outer arc with 7 customizable macro slots (Resonance, Chronometron, Export 5e, Sync Sheet, Substrate -1, Lotus Lock, LK Atlas).
-  * 2-Stage Idle Dormancy: 3.2s arc fold back to base dial, 6.5s fade to 18% opacity Ghost Lens (wakes instantly on pointer enter/touch).
-  * Dynamic calibration: Dial scale (0.7x-1.4x), arc spacing (0.8x-1.6x), and handedness (Left/Right) configurable via `[Dial]` Calibration Terminal.
-* **Vertical Layer Spine & Infinite Dynamic Portals:**
-  * Linear central spine spanning fixed layers: `-1` Core Substrate / ARPANET, `0` Base, `1` The Nyne Net, `2` Declared Church, `3` User Home, `4` K.A.M.P., `5` ObsydianHeart (`OH`).
-  * Dynamic `+` Portal Stack: Players and DMs can create unlimited custom upper portals (`USR+` and `CMP+` for LegendKeeper campaigns).
-* **Elevation-Locked Astral Node Graph:**
-  * Horizontal constellation orbiting outside the planet core ($r \ge 310\text{px}$).
-  * Clearance-gated visibility: Nodes reveal or restrict access dynamically based on current layer elevation and player clearance.
+  * **Axis Locking:** First direction past 14px threshold locks movement to either horizontal scrubbing or vertical layer climbing until pointer release.
+  * **Single-Tap (`x1`, ~180ms):** Collapses any open radial arcs, or focuses/launches highlighted node.
+  * **Single-Tap + Hold (~320ms):** Opens **Wayfinder / History Radial** displaying `Home (⌂)` and the last 2-3 visited nodes across any layer.
+  * **Center Long-Press (>750ms):** Snaps immediately to User Home (Layer 3) with full-scale haptic burst.
+  * **Double-tap (`x2`):** Expands inner navigation arc with discrete `Up (↑)`, `Center (Neutral / Empty Buffer)`, and `Down (↓)` controls.
+  * **Triple-tap (`x3`):** Expands outer customizable macro ring (7 slots along alien SVG PCB dogleg traces).
+  * **2-Stage Idle Dormancy:** 3.2s arc fold back to base dial, 6.5s fade to 18% opacity Ghost Lens (wakes instantly on pointer enter/touch).
+  * **Dynamic calibration:** Dial scale (0.7x-1.4x), arc spacing (0.8x-1.6x), handedness (Left/Right), User Home color picker, and OS Tutorial replay configurable via `[Dial]` Calibration Terminal.
+
+* **3-Tier Z-Depth Spatial Canvas (Telescope / Spyglass):**
+  * Decoupled from OS elevation layer:
+    1. **Tier 1 (Surface Map):** Zoomed in close-up surface geography ($z = 2.35$).
+    2. **Tier 2 (Planet Orbit):** Default canonical view ($z = 5.8$), showing Planet Konran with calibrated orbits for `Olysphere` ($r = 1.68$) and `Ayanath` ($r = -1.86$) with zero clipping.
+    3. **Tier 3 (Solar System):** Zoomed out macro view ($z = 18.0$), rendering the blazing Sun Sol-Prime corona, orbital guide rings for all 9 planetary planes (*Lyricia*, *Oray*, *Ousava*, *Konran*, *Kayzoku*, *Celeste*, *Psyon*, *Krayvuk*, *Slavyna*), and the torn twin-planets *Zha-Khor* (prograde) and *Zha-Vohl* (retrograde) passing in opposing orbital planes.
+  * Activated via top-bar `[🔭 SPYGLASS]` button or mouse wheel / pinch gestures with haptic tension and audible detent ticks.
+
+* **Dynamic OS Layer Stack (`Layers -1 to 6+`), Themes & Cover-Layer Masking:**
+  * **Layer -1 (CoreNet Substrate):** Dark Plum (`#2e1065`) & Glowing Gold Matrix (`#fbbf24`), digital rainfall, patron deity colored packets, static packets, and covert transit spaces.
+  * **Layers 0 & 1 (Base & Nyne Net):** Nyne's Electric Lilac/Lavender (`#c084fc`/`#a855f7`).
+  * **Layer 2 (Declared Church):** Dynamic Patron God mineral palette.
+  * **Layer 3 (User Home):** Customizable user color scheme.
+  * **Layer 4 (K.A.M.P.):** Tactile E-Ink (`#f4f1ea` / `#1c1917`).
+  * **Layer 5 (ObsydianHeart):** Classic Fallout retro-green meets 90s Amazon directory.
+  * **Layer 6+ (Dynamic & Campaign Portals):** Unlimited `+` stack for DM campaign boards with LegendKeeper sync.
+  * **Cipher Lens Masking:** Restricts unauthorized character nodes with an official clearance seal or spoofed decoy cover.
+
+* **Layer-Scoped Persistent Windows & Murder Board Canvas:**
+  * Floating windows automatically persist their coordinates, size, and state per `layerIndex`.
+  * Window headers feature `"Send To..."` layer dropdowns, Pin toggle, Hide toggle, and Up/Down layer steppers.
+  * Murder Board workspace allows pinning sticky-notes and drawing dynamic red thread connections between clues and nodes.
+
+* **Touch & Pointer Isolation:**
+  * Strict containment ensures the `SLABLET TERMINAL HUB` drawer **only** opens via explicit button clicks (`[+ New Terminal Node]` or `[+ Node]`).
+  * Blank desktop clicks safely close an open hub drawer while passing through cleanly when closed to allow 3D globe panning and zooming.
+
 * **Planet Konran Core Rule:**
   * Center diameter ($r < 308\text{px}$) is strictly preserved 100% visible and unblocked. Zero intrusive opaque geometry covers the planet.
 

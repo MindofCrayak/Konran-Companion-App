@@ -14,8 +14,11 @@ import {
   Shield,
   GraduationCap,
   CircleUserRound,
+  Home,
+  Eye,
+  Minus,
 } from 'lucide-react';
-import { OSLayer, OSNode, WheelPreferences } from '../types/slabletOS';
+import { OSLayer, OSNode, WheelPreferences, WayfinderItem } from '../types/slabletOS';
 import { useAstrolabeWheel } from '../hooks/useAstrolabeWheel';
 import './AstrolabeController.css';
 
@@ -29,11 +32,13 @@ interface AstrolabeControllerProps {
   totalNodesOnLayer: number;
   preferences: WheelPreferences;
   deityColor?: string;
+  wayfinderHistory?: WayfinderItem[];
   onLayerChange: (layerIndex: number) => void;
   onNodeChange: (nodeIndex: number) => void;
   onActivateNode: () => void;
   onExecuteMacro: (macroId: string) => void;
   onOpenCalibration: () => void;
+  onSelectWayfinder?: (item: WayfinderItem) => void;
 }
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -48,6 +53,8 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Shield,
   GraduationCap,
   CircleUserRound,
+  Home,
+  Eye,
   Disc,
 };
 
@@ -56,16 +63,18 @@ export const AstrolabeController: React.FC<AstrolabeControllerProps> = ({
   currentLayerIndex,
   maxLayerIndex,
   minLayerIndex,
-  currentNode,
+  currentNode: _currentNode,
   currentNodeIndex,
   totalNodesOnLayer,
   preferences,
   deityColor = '#39ff14',
+  wayfinderHistory = [],
   onLayerChange,
   onNodeChange,
   onActivateNode,
   onExecuteMacro,
   onOpenCalibration,
+  onSelectWayfinder,
 }) => {
   const {
     ringState,
@@ -73,7 +82,7 @@ export const AstrolabeController: React.FC<AstrolabeControllerProps> = ({
     highlightedButton,
     pointerHandlers,
     handleButtonExecute,
-    collapseRing,
+    collapseRing: _collapseRing,
     wakeFromGhost,
   } = useAstrolabeWheel({
     currentLayerIndex,
@@ -82,9 +91,11 @@ export const AstrolabeController: React.FC<AstrolabeControllerProps> = ({
     currentNodeIndex,
     totalNodesOnLayer,
     preferences,
+    wayfinderHistory,
     onLayerChange,
     onNodeChange,
     onActivateNode,
+    onSelectWayfinder,
     onExecuteMacro: (macroId) => {
       if (macroId === 'open-settings') {
         onOpenCalibration();
@@ -102,14 +113,14 @@ export const AstrolabeController: React.FC<AstrolabeControllerProps> = ({
   const innerRadius = (baseRadius + 32) * preferences.buttonSpacing;
   const innerAngles = isLeft
     ? [
-        { id: 'up', label: 'Up', angle: -85, icon: ArrowUp },
-        { id: 'center', label: 'Select', angle: -45, icon: Disc },
-        { id: 'down', label: 'Down', angle: -5, icon: ArrowDown },
+        { id: 'up', label: 'Up Layer', angle: -85, icon: ArrowUp },
+        { id: 'center-neutral', label: 'Neutral (Safe Buffer)', angle: -45, icon: Minus },
+        { id: 'down', label: 'Down Layer', angle: -5, icon: ArrowDown },
       ]
     : [
-        { id: 'up', label: 'Up', angle: -95, icon: ArrowUp },
-        { id: 'center', label: 'Select', angle: -135, icon: Disc },
-        { id: 'down', label: 'Down', angle: -175, icon: ArrowDown },
+        { id: 'up', label: 'Up Layer', angle: -95, icon: ArrowUp },
+        { id: 'center-neutral', label: 'Neutral (Safe Buffer)', angle: -135, icon: Minus },
+        { id: 'down', label: 'Down Layer', angle: -175, icon: ArrowDown },
       ];
 
   const innerButtons = innerAngles.map((item) => {
@@ -139,6 +150,31 @@ export const AstrolabeController: React.FC<AstrolabeControllerProps> = ({
       angle,
       x: outerRadius * Math.cos(rad),
       y: outerRadius * Math.sin(rad),
+    };
+  });
+
+  // Geometry calculations for Wayfinder History arc buttons (Home + 2-3 recent nodes)
+  const wayfinderRadius = (baseRadius + 48) * preferences.buttonSpacing;
+  const wayfinderItems = [
+    { id: 'wayfinder-home', label: 'User Home (3)', icon: Home, layerIndex: 3 },
+    ...wayfinderHistory.slice(0, 3).map((w) => ({
+      id: `wayfinder-${w.id}`,
+      label: `${w.title} (L${w.layerIndex})`,
+      icon: (w.icon && ICON_MAP[w.icon]) || Compass,
+      layerIndex: w.layerIndex,
+    })),
+  ];
+  const wayfinderStep = 22;
+  const wayfinderButtons = wayfinderItems.map((item, idx) => {
+    const angle = isLeft
+      ? -84 + idx * wayfinderStep
+      : -96 - idx * wayfinderStep;
+    const rad = (angle * Math.PI) / 180;
+    return {
+      ...item,
+      angle,
+      x: wayfinderRadius * Math.cos(rad),
+      y: wayfinderRadius * Math.sin(rad),
     };
   });
 
@@ -183,7 +219,7 @@ export const AstrolabeController: React.FC<AstrolabeControllerProps> = ({
             </filter>
           </defs>
 
-          {/* Inner Arc Traces */}
+          {/* Inner Arc Traces (x2) */}
           {ringState === 'inner-x2' && (
             <g filter="url(#circuitGlow)">
               <circle
@@ -209,7 +245,33 @@ export const AstrolabeController: React.FC<AstrolabeControllerProps> = ({
             </g>
           )}
 
-          {/* Outer Arc Traces */}
+          {/* Wayfinder Arc Traces */}
+          {ringState === 'wayfinder' && (
+            <g filter="url(#circuitGlow)">
+              <circle
+                cx="0"
+                cy="0"
+                r={wayfinderRadius}
+                fill="none"
+                stroke="var(--deity-accent)"
+                strokeWidth="1"
+                strokeDasharray="3 3"
+                opacity="0.5"
+              />
+              {wayfinderButtons.map((b) => (
+                <path
+                  key={`trace-${b.id}`}
+                  d={`M 0 0 L ${b.x * 0.4} ${b.y * 0.4} L ${b.x} ${b.y}`}
+                  fill="none"
+                  stroke="var(--deity-accent)"
+                  strokeWidth="1.2"
+                  opacity="0.7"
+                />
+              ))}
+            </g>
+          )}
+
+          {/* Outer Arc Traces (x3) */}
           {ringState === 'outer-x3' && (
             <g filter="url(#circuitGlow)">
               <circle
@@ -242,6 +304,32 @@ export const AstrolabeController: React.FC<AstrolabeControllerProps> = ({
         innerButtons.map((b) => {
           const Icon = b.icon;
           const isHighlighted = highlightedButton === b.id;
+          const isNeutral = b.id === 'center-neutral';
+          return (
+            <button
+              key={b.id}
+              className={`astrolabe-arc-button astrolabe-nav-button ${
+                isHighlighted ? 'astrolabe-arc-button--highlighted' : ''
+              } ${isNeutral ? 'opacity-40 pointer-events-none' : ''}`}
+              style={{
+                transform: `translate(${b.x}px, ${b.y}px)`,
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleButtonExecute(b.id);
+              }}
+              title={b.label}
+            >
+              <Icon className="w-3.5 h-3.5" />
+            </button>
+          );
+        })}
+
+      {/* Render Expanded Wayfinder Buttons */}
+      {ringState === 'wayfinder' &&
+        wayfinderButtons.map((b) => {
+          const Icon = b.icon;
+          const isHighlighted = highlightedButton === b.id;
           return (
             <button
               key={b.id}
@@ -255,7 +343,7 @@ export const AstrolabeController: React.FC<AstrolabeControllerProps> = ({
                 e.stopPropagation();
                 handleButtonExecute(b.id);
               }}
-              title={b.label}
+              title={`Wayfinder: ${b.label}`}
             >
               <Icon className="w-3.5 h-3.5" />
             </button>
@@ -295,7 +383,7 @@ export const AstrolabeController: React.FC<AstrolabeControllerProps> = ({
           height: `${baseRadius * 2}px`,
         }}
         {...pointerHandlers}
-        title="Astrolabe Controller // Drag X: Nodes · Drag Y: Layers · Double-Tap: Nav · Triple-Tap: Macros"
+        title="Astrolabe Controller // Drag X: Nodes · Drag Y: Layers · Double-Tap: Nav · Hold: Wayfinder · Triple-Tap: Macros"
       >
         <div className="astrolabe-gyro-ring" />
         <span className="astrolabe-dial-layer-code">{currentLayer.code}</span>
@@ -306,3 +394,4 @@ export const AstrolabeController: React.FC<AstrolabeControllerProps> = ({
     </div>
   );
 };
+

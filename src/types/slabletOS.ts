@@ -1,5 +1,7 @@
 import { TerminalWindowType } from '../types';
 
+export type ZDepthTier = 'surface' | 'planet' | 'system';
+
 export type OSLayerType = 
   | 'substrate' 
   | 'base' 
@@ -18,6 +20,8 @@ export interface OSLayer {
   type: OSLayerType;
   description: string;
   color?: string;
+  bgColor?: string;
+  themeStyle?: 'plum-matrix' | 'electric-lilac' | 'patron-mineral' | 'user-custom' | 'e-ink' | 'fallout-amazon' | 'campaign-board';
   isCustom?: boolean;
   isCampaign?: boolean;
   customId?: string;
@@ -41,12 +45,77 @@ export interface OSNode {
   minClearance?: number; // 0=Public, 1=Player, 2=Covenant, 3=Archivist/DM
   visibleOnLayers: number[]; // Elevation-locked visibility
   linkedNodeIds?: string[]; // Valid cross-node connections on this plane
+  isMasked?: boolean;
+  maskedDecoyType?: 'blank' | 'penthouse' | 'clearance_seal';
+  isPinned?: boolean;
   isHidden?: boolean;
+  clusterId?: string;
+  masterNodeId?: string;
   description?: string;
   badgeText?: string;
 }
 
-export type MenuRingState = 'collapsed' | 'inner-x2' | 'outer-x3';
+export interface SolarBody {
+  id: string;
+  name: string;
+  type: 'sun' | 'planet' | 'moon' | 'twin_planet';
+  deityId?: string;
+  orbitRadius: number;
+  orbitSpeed: number;
+  orbitTilt?: number;
+  isRetrograde?: boolean;
+  color: string;
+  size: number;
+  hasRings?: boolean;
+  ringColor?: string;
+  description: string;
+  badgeCount?: number;
+  twinTargetId?: string; // For the torn twin-planet on dual reverse orbit
+  twinDistance?: number;
+}
+
+export interface WayfinderItem {
+  id: string;
+  title: string;
+  layerIndex: number;
+  timestamp: number;
+  icon?: string;
+  color?: string;
+}
+
+export interface MurderBoardNote {
+  id: string;
+  title: string;
+  content: string;
+  color: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  layerIndex: number;
+  clusterId?: string;
+  masterNodeId?: string;
+  isPinned?: boolean;
+}
+
+export interface MurderBoardConnection {
+  id: string;
+  fromId: string;
+  toId: string;
+  color: string;
+  label?: string;
+  layerIndex: number;
+}
+
+export interface MurderBoardCluster {
+  id: string;
+  name: string;
+  color: string;
+  layerIndex: number;
+  isCollapsed?: boolean;
+}
+
+export type MenuRingState = 'collapsed' | 'inner-x2' | 'outer-x3' | 'wayfinder';
 
 export type MacroActionType = 
   | 'roll-resonance'
@@ -58,6 +127,7 @@ export type MacroActionType =
   | 'quick-lore'
   | 'open-settings'
   | 'cascade-windows'
+  | 'toggle-ztier'
   | 'launch-window';
 
 export interface MacroSlot {
@@ -75,17 +145,21 @@ export interface WheelPreferences {
   handedness: 'left' | 'right'; // Anchored to bottom-left or bottom-right
   autoGhost: boolean;     // 2-stage idle dormancy (default true)
   hapticFeedback: boolean;// Device haptic pulse (default true)
+  userHomeColor?: string; // User-selected color for Layer 3 (User Home)
+  userHomeBorder?: string;// User-selected border style for Layer 3
   macros: MacroSlot[];    // Exactly 7 macro slots
 }
 
 export const DEFAULT_ANCHORED_LAYERS: OSLayer[] = [
   {
     index: -1,
-    code: 'SUB',
-    name: 'Core Substrate',
+    code: 'CORE',
+    name: 'CoreNet',
     type: 'substrate',
-    description: 'Foundational routing lattice & raw ley-circuit code (ARPANET mode)',
-    color: '#00ffcc',
+    description: 'Deep-system routing lattice & raw ley-circuit code (ARPANET mode)',
+    color: '#fbbf24',
+    bgColor: '#2e1065',
+    themeStyle: 'plum-matrix',
     minClearance: 0,
   },
   {
@@ -93,8 +167,10 @@ export const DEFAULT_ANCHORED_LAYERS: OSLayer[] = [
     code: 'BAS',
     name: 'Base (Konran)',
     type: 'base',
-    description: 'Root planetary surface, municipal standings, & surface calibration',
-    color: '#39ff14',
+    description: 'Root surface shell, municipal standings, & surface calibration',
+    color: '#c084fc',
+    bgColor: '#0a0515',
+    themeStyle: 'electric-lilac',
     minClearance: 0,
   },
   {
@@ -102,8 +178,10 @@ export const DEFAULT_ANCHORED_LAYERS: OSLayer[] = [
     code: 'NYN',
     name: 'The Nyne Net',
     type: 'public',
-    description: 'Free planetary internet open to everyone; public broadcasts & 36h celestial clock',
-    color: '#06b6d4',
+    description: 'Free public planetary network (36h Chronometron, lunar/tidal feeds, notices)',
+    color: '#a855f7',
+    bgColor: '#0a0515',
+    themeStyle: 'electric-lilac',
     minClearance: 0,
   },
   {
@@ -111,8 +189,9 @@ export const DEFAULT_ANCHORED_LAYERS: OSLayer[] = [
     code: 'DCL',
     name: 'Declared',
     type: 'gated',
-    description: 'Nyne Gods Churches Intranet; sect decrees, clergy comms & covenants',
+    description: 'Nyne Gods Churches Intranet (Clearance-gated sect secrets & covenants)',
     color: '#ffd700',
+    themeStyle: 'patron-mineral',
     minClearance: 2,
   },
   {
@@ -122,6 +201,7 @@ export const DEFAULT_ANCHORED_LAYERS: OSLayer[] = [
     type: 'personal',
     description: 'Personal bio-locked home screen; 5.5e character sheet, resonance & inventory',
     color: '#60a5fa',
+    themeStyle: 'user-custom',
     minClearance: 1,
   },
   {
@@ -130,7 +210,9 @@ export const DEFAULT_ANCHORED_LAYERS: OSLayer[] = [
     name: 'K.A.M.P.',
     type: 'institutional',
     description: 'Konran Academy of Might & Proficiency; 4-House sorting, kodex & courses',
-    color: '#ef4444',
+    color: '#1c1917',
+    bgColor: '#f4f1ea',
+    themeStyle: 'e-ink',
     minClearance: 1,
   },
   {
@@ -138,8 +220,10 @@ export const DEFAULT_ANCHORED_LAYERS: OSLayer[] = [
     code: 'OH4',
     name: 'ObsydianHeart',
     type: 'system',
-    description: 'Slablet MK IV hardware diagnostics & Walter Kammerer 5e mobile export engine',
-    color: '#a855f7',
+    description: 'Classic Fallout meets 90s Amazon; Slablet MK IV tools & 5e mobile exporter',
+    color: '#ffaa00',
+    bgColor: '#0c120c',
+    themeStyle: 'fallout-amazon',
     minClearance: 1,
   },
 ];
@@ -149,7 +233,7 @@ export const DEFAULT_MACRO_SLOTS: MacroSlot[] = [
   { id: 'm2', label: 'Chronometron', icon: 'Clock', action: 'open-chronometron' },
   { id: 'm3', label: 'Export 5e', icon: 'Download', action: 'export-5e' },
   { id: 'm4', label: 'Sync Sheet', icon: 'RefreshCw', action: 'sync-sheet' },
-  { id: 'm5', label: 'Substrate -1', icon: 'Terminal', action: 'jump-substrate' },
+  { id: 'm5', label: 'Spyglass Z', icon: 'Eye', action: 'toggle-ztier' },
   { id: 'm6', label: 'Lotus Lock', icon: 'Lock', action: 'toggle-lock' },
   { id: 'm7', label: 'LK Atlas', icon: 'Compass', action: 'quick-lore' },
 ];
@@ -160,5 +244,7 @@ export const DEFAULT_WHEEL_PREFERENCES: WheelPreferences = {
   handedness: 'left',
   autoGhost: true,
   hapticFeedback: true,
+  userHomeColor: '#60a5fa',
+  userHomeBorder: 'solid',
   macros: DEFAULT_MACRO_SLOTS,
 };

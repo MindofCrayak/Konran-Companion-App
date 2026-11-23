@@ -4,10 +4,16 @@ import {
   Minus, 
   Maximize2, 
   Minimize2, 
-  GripHorizontal
+  GripHorizontal,
+  Pin,
+  EyeOff,
+  ArrowUp,
+  ArrowDown,
+  Layers,
+  ShieldAlert,
 } from 'lucide-react';
 import { CanvasWindowState } from '../types';
-import { playKeyClick } from '../utils/audio';
+import { playKeyClick, playOptionSelect } from '../utils/audio';
 
 interface FloatingTerminalNodeProps {
   window: CanvasWindowState;
@@ -17,6 +23,12 @@ interface FloatingTerminalNodeProps {
   onToggleMaximize: () => void;
   onUpdatePosition: (pos: { x: number; y: number }) => void;
   onUpdateSize: (size: { width: number; height: number }) => void;
+  onSendToLayer?: (layerIndex: number) => void;
+  onTogglePin?: () => void;
+  onToggleHide?: () => void;
+  onStepLayer?: (delta: number) => void;
+  availableLayers?: Array<{ index: number; code: string; name: string }>;
+  userClearance?: number;
   children: React.ReactNode;
 }
 
@@ -28,6 +40,20 @@ export const FloatingTerminalNode: React.FC<FloatingTerminalNodeProps> = ({
   onToggleMaximize,
   onUpdatePosition,
   onUpdateSize,
+  onSendToLayer,
+  onTogglePin,
+  onToggleHide,
+  onStepLayer,
+  availableLayers = [
+    { index: -1, code: 'CORE', name: 'CoreNet' },
+    { index: 0, code: 'BAS', name: 'Base (Konran)' },
+    { index: 1, code: 'NYN', name: 'The Nyne Net' },
+    { index: 2, code: 'DCL', name: 'Declared' },
+    { index: 3, code: 'USR', name: 'User Home' },
+    { index: 4, code: 'KMP', name: 'K.A.M.P.' },
+    { index: 5, code: 'OH4', name: 'ObsydianHeart' },
+  ],
+  userClearance = 1,
   children,
 }) => {
   const nodeRef = useRef<HTMLDivElement>(null);
@@ -37,6 +63,7 @@ export const FloatingTerminalNode: React.FC<FloatingTerminalNodeProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [resizeDirection, setResizeDirection] = useState<'se' | 'e' | 's' | null>(null);
+  const [isLayerMenuOpen, setIsLayerMenuOpen] = useState(false);
 
   const dragStartRef = useRef({ mouseX: 0, mouseY: 0, winX: 0, winY: 0 });
   const resizeStartRef = useRef({ mouseX: 0, mouseY: 0, winW: 0, winH: 0 });
@@ -59,9 +86,9 @@ export const FloatingTerminalNode: React.FC<FloatingTerminalNodeProps> = ({
 
   // Dragging logic
   const handlePointerDownHeader = (e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest('button')) return;
+    if ((e.target as HTMLElement).closest('button, select, input')) return;
     onFocus();
-    if (win.isMaximized) return;
+    if (win.isMaximized || win.isPinned) return;
 
     setIsDragging(true);
     dragStartRef.current = {
@@ -102,7 +129,7 @@ export const FloatingTerminalNode: React.FC<FloatingTerminalNodeProps> = ({
   const handlePointerDownResize = (e: React.PointerEvent, dir: 'se' | 'e' | 's') => {
     e.stopPropagation();
     onFocus();
-    if (win.isMaximized || win.isMinimized) return;
+    if (win.isMaximized || win.isMinimized || win.isPinned) return;
 
     setIsResizing(true);
     setResizeDirection(dir);
@@ -468,9 +495,53 @@ export const FloatingTerminalNode: React.FC<FloatingTerminalNodeProps> = ({
           </div>
         )}
 
-        {/* Left: Terminal Node Title & Telemetry Dot */}
-        <div className="flex items-center gap-2 min-w-0 z-10">
-          <GripHorizontal className="w-4 h-4 opacity-70 shrink-0 text-[#d4af37]" />
+        {/* Left: Send-To Layer Menu + Terminal Node Title */}
+        <div className="flex items-center gap-1.5 min-w-0 z-10">
+          <GripHorizontal className="w-3.5 h-3.5 opacity-60 shrink-0 text-[#d4af37]" />
+          
+          {/* Send To... Layer Menu Dropdown */}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                playKeyClick();
+                setIsLayerMenuOpen(!isLayerMenuOpen);
+              }}
+              className="px-1.5 py-0.5 rounded bg-black/60 hover:bg-black/90 border border-white/20 text-[9.5px] font-mono text-[#ffd700] flex items-center gap-1 cursor-pointer"
+              title="Send window to another OS layer"
+            >
+              <Layers className="w-2.5 h-2.5" />
+              <span>L{win.layerIndex ?? 0}</span>
+            </button>
+
+            {isLayerMenuOpen && (
+              <div
+                className="absolute left-0 top-full mt-1 w-44 bg-[#0a0f0d] border border-[#ffd700] rounded shadow-2xl p-1 z-50 font-mono text-[10px] text-white animate-fadeIn"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="px-2 py-1 text-white/50 border-b border-white/10 uppercase tracking-wider text-[8.5px]">
+                  Send Node To Layer
+                </div>
+                {availableLayers.map((l) => (
+                  <button
+                    key={l.index}
+                    onClick={() => {
+                      playOptionSelect();
+                      onSendToLayer?.(l.index);
+                      setIsLayerMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-2 py-1 rounded flex items-center justify-between hover:bg-[#ffd700]/20 cursor-pointer ${
+                      win.layerIndex === l.index ? 'text-[#ffd700] font-bold' : 'text-white/80'
+                    }`}
+                  >
+                    <span>{l.code} ({l.name})</span>
+                    <span>L{l.index}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           <span
             className="w-2 h-2 rounded-full shrink-0 animate-pulse conduit-trace-active"
           />
@@ -486,8 +557,63 @@ export const FloatingTerminalNode: React.FC<FloatingTerminalNodeProps> = ({
           </span>
         </div>
 
-        {/* Right: Window Controls (Minimize, Maximize, Close) */}
+        {/* Right: Window Controls (Pin, Hide, Layer Steppers, Min/Max/Close) */}
         <div className="flex items-center gap-1 shrink-0 ml-2 z-10">
+          {/* Step Layer Up (↑) */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              playKeyClick();
+              onStepLayer?.(1);
+            }}
+            className="p-1 rounded hover:bg-white/10 text-white/60 hover:text-[#39ff14] cursor-pointer transition-colors"
+            title="Step Node Up One Layer (↑)"
+          >
+            <ArrowUp className="w-3 h-3" />
+          </button>
+
+          {/* Step Layer Down (↓) */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              playKeyClick();
+              onStepLayer?.(-1);
+            }}
+            className="p-1 rounded hover:bg-white/10 text-white/60 hover:text-[#39ff14] cursor-pointer transition-colors"
+            title="Step Node Down One Layer (↓)"
+          >
+            <ArrowDown className="w-3 h-3" />
+          </button>
+
+          {/* Pin in Place */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              playKeyClick();
+              onTogglePin?.();
+            }}
+            className={`p-1 rounded hover:bg-white/10 cursor-pointer transition-colors ${
+              win.isPinned ? 'text-[#ffcc00]' : 'text-white/40 hover:text-white'
+            }`}
+            title={win.isPinned ? 'Unpin Window' : 'Pin Window in Place'}
+          >
+            <Pin className="w-3 h-3" />
+          </button>
+
+          {/* Eyeball Hide */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              playKeyClick();
+              onToggleHide?.();
+            }}
+            className="p-1 rounded hover:bg-white/10 text-white/40 hover:text-white cursor-pointer transition-colors"
+            title="Hide Window (Restore from Layer Spine)"
+          >
+            <EyeOff className="w-3 h-3" />
+          </button>
+
+          {/* Minimize */}
           <button
             onClick={() => {
               playKeyClick();
@@ -499,6 +625,7 @@ export const FloatingTerminalNode: React.FC<FloatingTerminalNodeProps> = ({
             <Minus className="w-3.5 h-3.5" />
           </button>
 
+          {/* Maximize */}
           <button
             onClick={() => {
               playKeyClick();
@@ -514,6 +641,7 @@ export const FloatingTerminalNode: React.FC<FloatingTerminalNodeProps> = ({
             )}
           </button>
 
+          {/* Close */}
           <button
             onClick={() => {
               playKeyClick();
@@ -527,9 +655,24 @@ export const FloatingTerminalNode: React.FC<FloatingTerminalNodeProps> = ({
         </div>
       </div>
 
-      {/* Node Content Body */}
+      {/* Node Content Body or Cover-Layer Cipher Masking */}
       <div className="flex-1 min-h-0 overflow-hidden relative">
-        {children}
+        {((win.minClearance || 0) > userClearance || win.isMasked) ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center font-mono bg-black/95 text-[#ef4444] z-20">
+            <ShieldAlert className="w-12 h-12 mb-3 text-[#ef4444] animate-pulse" />
+            <h4 className="text-sm font-bold tracking-wider mb-1">
+              [LACK OF CLEARANCE // CIPHER MASKED]
+            </h4>
+            <p className="text-[11px] text-white/60 max-w-sm mb-3">
+              This node contains classified Church covenants or sealed DM lore. Elevate back to Layer 2 (Declared) with verified liturgical clearance to decipher contents.
+            </p>
+            <div className="p-3 bg-white/5 border border-white/10 rounded text-[10px] text-white/40 italic font-serif">
+              "Penthouse Forum // Vol. IX, Issue 4 — Standard Municipal Agrarian Report: Grain shipments through Crafton Cove remain nominal..."
+            </div>
+          </div>
+        ) : (
+          children
+        )}
       </div>
 
       {/* Resizing Edge Handles (Only if not maximized and not on mobile) */}

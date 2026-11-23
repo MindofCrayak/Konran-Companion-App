@@ -29,6 +29,7 @@ interface OSCalibrationPanelProps {
   onUpdatePreferences: (newPrefs: WheelPreferences) => void;
   onAddCustomPortal: (portal: { name: string; code: string; color: string; isCampaign?: boolean }) => void;
   onRemoveCustomPortal: (index: number) => void;
+  onReplayTutorial?: () => void;
   onClose?: () => void;
 }
 
@@ -37,6 +38,7 @@ const AVAILABLE_ACTIONS: Array<{ action: MacroActionType; label: string; icon: s
   { action: 'open-chronometron', label: 'Open 36h Chronometron', icon: 'Clock' },
   { action: 'export-5e', label: 'Export 5e XML/JSON', icon: 'Download' },
   { action: 'sync-sheet', label: 'Sync Google Sheet', icon: 'RefreshCw' },
+  { action: 'toggle-ztier', label: 'Toggle Spyglass Z-Depth', icon: 'Eye' },
   { action: 'jump-substrate', label: 'Jump to Substrate -1', icon: 'Terminal' },
   { action: 'toggle-lock', label: 'Toggle Lotus Lock', icon: 'Lock' },
   { action: 'quick-lore', label: 'Quick LK Lore Search', icon: 'Compass' },
@@ -49,6 +51,7 @@ export const OSCalibrationPanel: React.FC<OSCalibrationPanelProps> = ({
   onUpdatePreferences,
   onAddCustomPortal,
   onRemoveCustomPortal,
+  onReplayTutorial,
 }) => {
   const [activeTab, setActiveTab] = useState<'wheel' | 'macros' | 'portals'>('wheel');
 
@@ -268,11 +271,52 @@ export const OSCalibrationPanel: React.FC<OSCalibrationPanelProps> = ({
             </button>
           </div>
 
-          {/* Reset Defaults */}
-          <div className="pt-2 flex justify-end">
+          {/* User Home (Layer 3) Custom Accent Color */}
+          <div className="bg-black/40 border border-white/10 p-3 rounded">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <span className="font-bold text-[#60a5fa] block">User Home (Layer 3) Palette</span>
+                <span className="text-[10px] text-white/50">Personalize your bio-locked desktop accent</span>
+              </div>
+              <span
+                className="w-4 h-4 rounded-full border border-white/50"
+                style={{ backgroundColor: preferences.userHomeColor || '#60a5fa' }}
+              />
+            </div>
+            <div className="flex gap-2 pt-1">
+              {['#60a5fa', '#39ff14', '#ffd700', '#ec4899', '#06b6d4', '#a855f7', '#ef4444', '#f59e0b'].map((col) => (
+                <button
+                  key={col}
+                  onClick={() => {
+                    playOptionSelect();
+                    onUpdatePreferences({ ...preferences, userHomeColor: col });
+                  }}
+                  className={`w-7 h-7 rounded-full border cursor-pointer transition-transform ${
+                    (preferences.userHomeColor || '#60a5fa') === col ? 'border-white scale-110 shadow-[0_0_8px_white]' : 'border-black/50'
+                  }`}
+                  style={{ backgroundColor: col }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Replay Tutorial & Reset Defaults */}
+          <div className="pt-2 flex items-center justify-between border-t border-white/10">
+            {onReplayTutorial && (
+              <button
+                onClick={() => {
+                  playKeyClick();
+                  onReplayTutorial();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#ffd700]/15 border border-[#ffd700]/40 text-[#ffd700] hover:bg-[#ffd700]/30 cursor-pointer"
+              >
+                <Compass className="w-3.5 h-3.5" />
+                <span>Replay OS Tutorial</span>
+              </button>
+            )}
             <button
               onClick={handleResetDefaults}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-white/5 hover:bg-white/15 text-white/70 hover:text-white cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-white/5 hover:bg-white/15 text-white/70 hover:text-white cursor-pointer ml-auto"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Reset to Factory Calibration</span>

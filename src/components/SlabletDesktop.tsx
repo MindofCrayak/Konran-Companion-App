@@ -24,10 +24,11 @@ import {
   ChevronDown,
   Check,
   KeyRound,
-  LogOut
+  LogOut,
+  Eye,
 } from 'lucide-react';
 import { useCharacter } from '../context/CharacterContext';
-import { playKeyClick, playOptionSelect } from '../utils/audio';
+import { playKeyClick, playOptionSelect, triggerHaptic, playDetentTick } from '../utils/audio';
 import { getKonranGrandState } from '../utils/celestial';
 import { KonranGlobe } from './KonranGlobe';
 import { KonranMandalaOverlay } from './KonranMandalaOverlay';
@@ -56,7 +57,10 @@ import { LITURGICAL_PALETTES } from './FatedBadgeToken';
 import { AstrolabeController } from './AstrolabeController';
 import { AstralLayerSpine } from './AstralLayerSpine';
 import { OSCalibrationPanel } from './OSCalibrationPanel';
-import { DEFAULT_ANCHORED_LAYERS, OSLayer, OSNode } from '../types/slabletOS';
+import { CoreNetMatrixOverlay } from './CoreNetMatrixOverlay';
+import { MurderBoardLayer } from './MurderBoardLayer';
+import { OSTutorialOverlay } from './OSTutorialOverlay';
+import { DEFAULT_ANCHORED_LAYERS, OSLayer, OSNode, ZDepthTier, WayfinderItem } from '../types/slabletOS';
 import { INITIAL_OS_NODES } from '../data/osNodesData';
 import { CanvasWindowState, TerminalWindowType } from '../types';
 import './SlabletDesktop.css';
@@ -175,6 +179,73 @@ export const SlabletDesktop = ({
   const [radialMenuPos, setRadialMenuPos] = useState<{ x: number; y: number } | null>(null);
   const noticeTimer = useRef<number | null>(null);
 
+  const showSystemNotice = useCallback((msg: string) => {
+    playKeyClick();
+    setNotice(msg);
+    if (noticeTimer.current !== null) window.clearTimeout(noticeTimer.current);
+    noticeTimer.current = window.setTimeout(() => {
+      setNotice('');
+      noticeTimer.current = null;
+    }, 2800);
+  }, []);
+
+  // Spatial OS Layers Stack
+  const allLayers: OSLayer[] = useMemo(() => {
+    return [...DEFAULT_ANCHORED_LAYERS, ...customPortals];
+  }, [customPortals]);
+
+  const maxLayerIndex = useMemo(() => {
+    if (allLayers.length === 0) return 5;
+    return Math.max(...allLayers.map(l => l.index));
+  }, [allLayers]);
+
+  // 3-Tier Z-Depth Spatial Canvas State ('surface' | 'planet' | 'system')
+  const [zTier, setZTier] = useState<ZDepthTier>('planet');
+
+  // Wayfinder History (Last visited nodes across any layer)
+  const [wayfinderHistory, setWayfinderHistory] = useState<WayfinderItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('konran_wayfinder_history_v1');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const pushWayfinderItem = useCallback((id: string, title: string, layerIndex: number, icon?: string) => {
+    setWayfinderHistory((prev) => {
+      const filtered = prev.filter((item) => item.id !== id);
+      const updated = [{ id, title, layerIndex, timestamp: Date.now(), icon }, ...filtered].slice(0, 5);
+      try {
+        localStorage.setItem('konran_wayfinder_history_v1', JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+  }, []);
+
+  // 4-Step Interactive Onboarding Tutorial State
+  const [isTutorialOpen, setIsTutorialOpen] = useState(() => {
+    try {
+      return localStorage.getItem('konran_os_tutorial_done') !== 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  // Cycle Z-Tier with Haptic Snap
+  const cycleZTier = useCallback(() => {
+    setZTier((prev) => {
+      const next: ZDepthTier = prev === 'surface' ? 'planet' : prev === 'planet' ? 'system' : 'surface';
+      const stepIdx = next === 'surface' ? 0 : next === 'planet' ? 1 : 2;
+      playDetentTick(stepIdx);
+      triggerHaptic([14, 18]);
+      showSystemNotice(`SPYGLASS CALIBRATION // ${next.toUpperCase()} VIEW (TIER ${stepIdx + 1})`);
+      return next;
+    });
+  }, [showSystemNotice]);
+
   // Floating Windows State
   const [windows, setWindows] = useState<CanvasWindowState[]>(() => {
     try {
@@ -210,15 +281,6 @@ export const SlabletDesktop = ({
     if (noticeTimer.current !== null) window.clearTimeout(noticeTimer.current);
   }, []);
 
-  const showSystemNotice = (msg: string) => {
-    playKeyClick();
-    setNotice(msg);
-    if (noticeTimer.current !== null) window.clearTimeout(noticeTimer.current);
-    noticeTimer.current = window.setTimeout(() => {
-      setNotice('');
-      noticeTimer.current = null;
-    }, 2800);
-  };
 
   // Bring window to front
   const focusWindow = useCallback((id: string) => {
@@ -250,6 +312,36 @@ export const SlabletDesktop = ({
   // Close window
   const closeWindow = useCallback((id: string) => {
     setWindows(prev => prev.map(w => w.id === id ? { ...w, isOpen: false } : w));
+  }, []);
+
+  // Send window to specific OS layer
+  const sendWindowToLayer = useCallback((id: string, targetLayerIndex: number) => {
+    playOptionSelect();
+    setWindows(prev => prev.map(w => w.id === id ? { ...w, layerIndex: targetLayerIndex } : w));
+    showSystemNotice(`NODE MOVED // ELEVATION SHIFTED TO LAYER ${targetLayerIndex}`);
+  }, [showSystemNotice]);
+
+  // Step window up or down one layer
+  const stepWindowLayer = useCallback((id: string, delta: number) => {
+    playOptionSelect();
+    setWindows(prev => prev.map(w => {
+      if (w.id !== id) return w;
+      const currentL = w.layerIndex ?? currentLayerIndex;
+      const targetL = Math.max(-1, Math.min(maxLayerIndex, currentL + delta));
+      return { ...w, layerIndex: targetL };
+    }));
+  }, [currentLayerIndex, maxLayerIndex]);
+
+  // Toggle window pin in place
+  const togglePinWindow = useCallback((id: string) => {
+    playKeyClick();
+    setWindows(prev => prev.map(w => w.id === id ? { ...w, isPinned: !w.isPinned } : w));
+  }, []);
+
+  // Toggle window eyeball hide
+  const toggleHideWindow = useCallback((id: string) => {
+    playKeyClick();
+    setWindows(prev => prev.map(w => w.id === id ? { ...w, isHidden: !w.isHidden } : w));
   }, []);
 
   // Update window custom attributes
@@ -301,10 +393,13 @@ export const SlabletDesktop = ({
           ? Math.max(46, Math.round((window.innerHeight - height) / 2))
           : Math.min(Math.max(46, existing.position.y), safeMaxY);
 
+        pushWayfinderItem(existing.id, title, existing.layerIndex ?? currentLayerIndex);
+
         return prev.map(w => w.id === existing.id ? {
           ...w,
           isOpen: true,
           isMinimized: false,
+          layerIndex: currentLayerIndex,
           position: { x: centeredX, y: centeredY },
           size: { width, height },
           zIndex: nextZIndex.current
@@ -324,10 +419,14 @@ export const SlabletDesktop = ({
       const clampedX = Math.max(8, Math.min(offsetX, safeMaxX));
       const clampedY = Math.max(46, Math.min(offsetY, safeMaxY));
 
+      const newId = `node-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+      pushWayfinderItem(newId, title, currentLayerIndex);
+
       const newWin: CanvasWindowState = {
-        id: `node-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        id: newId,
         title,
         type,
+        layerIndex: currentLayerIndex,
         isOpen: true,
         isMinimized: false,
         isMaximized: false,
@@ -344,7 +443,7 @@ export const SlabletDesktop = ({
     });
 
     showSystemNotice(`TERMINAL NODE ATTACHED // ${title.toUpperCase()}`);
-  }, [showSystemNotice]);
+  }, [showSystemNotice, currentLayerIndex, pushWayfinderItem]);
 
   // Arrange / Cascade windows
   const cascadeWindows = () => {
@@ -367,28 +466,20 @@ export const SlabletDesktop = ({
     showSystemNotice('DESKTOP RECONFIGURED // DEFAULT NODES RESTORED');
   };
 
-  // Handle Canvas Blank Space click (not on interactive elements)
+  // Strict Backdrop Dismissal Only for Terminal Hub drawer
   const handleCanvasClick = (e: React.MouseEvent) => {
-    // If click originated from a window or button, don't open radial menu
-    if ((e.target as HTMLElement).closest('.floating-terminal-node, button, input, textarea, a')) {
+    // If click originated from a window, button, click-wheel, or input, do not interfere
+    if ((e.target as HTMLElement).closest('.floating-terminal-node, .astrolabe-controller-root, button, input, textarea, a')) {
       return;
     }
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.min(rect.width - 240, Math.max(20, e.clientX));
-    const y = Math.min(rect.height - 280, Math.max(70, e.clientY));
-    setRadialMenuPos({ x, y });
-    playKeyClick();
+    // If Terminal Hub is open, clicking blank space closes it cleanly
+    if (radialMenuPos) {
+      setRadialMenuPos(null);
+      playKeyClick();
+    }
+    // If closed, DO NOTHING — strictly allows pass-through to 3D globe pan/zoom and gestures
   };
 
-  // Spatial OS Layers & Node Graph Stack
-  const allLayers: OSLayer[] = useMemo(() => {
-    return [...DEFAULT_ANCHORED_LAYERS, ...customPortals];
-  }, [customPortals]);
-
-  const maxLayerIndex = useMemo(() => {
-    if (allLayers.length === 0) return 5;
-    return Math.max(...allLayers.map(l => l.index));
-  }, [allLayers]);
 
   const currentLayer = useMemo(() => {
     return allLayers.find(l => l.index === currentLayerIndex) || allLayers[1];
@@ -460,23 +551,46 @@ export const SlabletDesktop = ({
       case 'open-settings':
         launchWindow('custom', 'OS & Astrolabe Calibration', '#39ff14');
         break;
+      case 'toggle-ztier':
+        cycleZTier();
+        break;
       default:
         break;
     }
-  }, [wheelPreferences, launchWindow, showSystemNotice, syncToLedgerSheet, cascadeWindows]);
+  }, [wheelPreferences, launchWindow, showSystemNotice, syncToLedgerSheet, cascadeWindows, cycleZTier]);
 
   const celestialState = getKonranGrandState(now);
   const { hourAngle, minuteAngle, secondAngle, isNightwatch, timeString, liturgicalDay } = celestialState;
 
-  // Active open windows count
-  const openWindows = windows.filter(w => w.isOpen);
+  // Layer-Scoped Persistent Windows (Only show windows belonging to current layer elevation)
+  const openWindows = useMemo(() => {
+    return windows.filter(
+      (w) => w.isOpen && !w.isHidden && (w.layerIndex === undefined || w.layerIndex === currentLayerIndex)
+    );
+  }, [windows, currentLayerIndex]);
+
   const activePatronPalette = activeCharacter?.declaredDeity
     ? LITURGICAL_PALETTES[activeCharacter.declaredDeity]
     : LITURGICAL_PALETTES.Oray;
 
+  // Dynamic OS Theme Class per Layer
+  const layerThemeClass = useMemo(() => {
+    if (currentLayerIndex === -1) return 'slablet-theme-corenet';
+    if (currentLayerIndex === 0 || currentLayerIndex === 1) return 'slablet-theme-lilac';
+    if (currentLayerIndex === 4) return 'slablet-theme-eink';
+    if (currentLayerIndex === 5) return 'slablet-theme-fallout';
+    if (currentLayerIndex >= 6) return 'slablet-theme-campaign';
+    return '';
+  }, [currentLayerIndex]);
+
   return (
     <main 
-      className="slablet-desktop select-none"
+      className={`slablet-desktop select-none ${layerThemeClass}`}
+      style={
+        {
+          '--user-accent': wheelPreferences.userHomeColor || '#60a5fa',
+        } as React.CSSProperties
+      }
       onClick={handleCanvasClick}
     >
       {!isIgnited && (
@@ -716,6 +830,20 @@ export const SlabletDesktop = ({
             </span>
           </div>
 
+          {/* 3-Tier Z-Depth Spyglass / Telescope Toggle */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              cycleZTier();
+            }}
+            className="flex items-center gap-1 px-2 py-0.5 rounded border border-[#38bdf8]/60 bg-black/70 hover:border-[#38bdf8] text-[9.5px] font-mono text-[#38bdf8] hover:text-white cursor-pointer transition-colors shadow-[0_0_8px_rgba(56,189,248,0.25)]"
+            title="Toggle Z-Depth Spatial Scale (Surface / Planet Orbit / Solar System)"
+          >
+            <Eye className="w-3 h-3 text-[#38bdf8]" />
+            <span className="font-bold tracking-wider">🔭 SPYGLASS [{zTier.toUpperCase()}]</span>
+          </button>
+
           <button
             type="button"
             onClick={(e) => {
@@ -742,24 +870,18 @@ export const SlabletDesktop = ({
         {/* Central Planet Konran Holographic Core */}
         <div className="slablet-globe-frame z-0">
           <div 
-            onClick={(e) => {
-              e.stopPropagation();
-              playKeyClick();
-              const rect = e.currentTarget.getBoundingClientRect();
-              setRadialMenuPos({ x: rect.left, y: rect.bottom + 8 });
-            }}
-            className="slablet-globe-label cursor-pointer hover:border-[#39ff14] hover:shadow-[0_0_15px_rgba(57,255,20,0.5)] transition-all"
-            title="Click to open Terminal Access Hub"
+            className="slablet-globe-label"
+            title="Planet Konran Live Celestial Orbit"
           >
             <span className="slablet-status-light" />
-            KONRAN // LIVE ORBIT [CLICK TO ACCESS]
+            KONRAN // LIVE ORBIT
           </div>
 
           <KonranGlobe 
+            zTier={zTier}
             onGlobeClick={() => {
               playOptionSelect();
-              showSystemNotice('PLANETARY TELEMETRY // ACCESSING TERMINAL HUB');
-              setRadialMenuPos({ x: (window.innerWidth / 2) - 130, y: (window.innerHeight / 2) - 100 });
+              cycleZTier();
             }} 
           />
 
@@ -818,10 +940,22 @@ export const SlabletDesktop = ({
           </button>
         </div>
 
+        {/* Layer -1: CoreNet Deep Plum & Glowing Gold Matrix Overlay */}
+        <CoreNetMatrixOverlay 
+          isActive={currentLayerIndex === -1} 
+          deityColor={activePatronPalette?.primaryHex} 
+        />
+
+        {/* Player Murder Board Canvas (Sticky Notes & Red Threads) */}
+        <MurderBoardLayer 
+          layerIndex={currentLayerIndex}
+          deityColor={activePatronPalette?.primaryHex}
+        />
+
         {/* ============================================================== */}
         {/* RESIZABLE FLOATING TERMINAL NODES / DISPLAY SCREENS           */}
         {/* ============================================================== */}
-        {windows.filter(w => w.isOpen).map((win) => (
+        {openWindows.map((win) => (
           <FloatingTerminalNode
             key={win.id}
             window={win}
@@ -831,6 +965,12 @@ export const SlabletDesktop = ({
             onToggleMaximize={() => toggleMaximizeWindow(win.id)}
             onUpdatePosition={(pos) => updateWindowPosition(win.id, pos)}
             onUpdateSize={(size) => updateWindowSize(win.id, size)}
+            onSendToLayer={(targetL) => sendWindowToLayer(win.id, targetL)}
+            onStepLayer={(delta) => stepWindowLayer(win.id, delta)}
+            onTogglePin={() => togglePinWindow(win.id)}
+            onToggleHide={() => toggleHideWindow(win.id)}
+            availableLayers={allLayers.map((l) => ({ index: l.index, code: l.code, name: l.name }))}
+            userClearance={account.role === 'archivist' ? 3 : (activeCharacter?.declaredDeity ? 2 : 1)}
           >
             {/* Render Node Content Based on Type */}
             {win.type === 'badge' && activeCharacter && (
@@ -1013,6 +1153,7 @@ export const SlabletDesktop = ({
                   onUpdatePreferences={updateWheelPreferences}
                   onAddCustomPortal={addCustomPortal}
                   onRemoveCustomPortal={removeCustomPortal}
+                  onReplayTutorial={() => setIsTutorialOpen(true)}
                   onClose={() => closeWindow(win.id)}
                 />
               ) : (
@@ -1349,6 +1490,18 @@ export const SlabletDesktop = ({
             <span>Atlas</span>
           </button>
 
+          {/* Dedicated Spyglass / Telescope Z-Depth Tier Toggle */}
+          <button 
+            className={`slablet-micro-pill ${zTier !== 'planet' ? 'border-[#38bdf8] text-[#38bdf8] bg-[#38bdf8]/10' : ''}`} 
+            onClick={() => {
+              cycleZTier();
+            }}
+            title={`Spyglass Z-Depth View: ${zTier.toUpperCase()} (Click to cycle World Surface / Planet Orbit / Solar System)`}
+          >
+            <Eye className="w-3 h-3 text-[#38bdf8]" />
+            <span>🔭 {zTier === 'surface' ? 'Surface' : zTier === 'system' ? 'System' : 'Orbit'}</span>
+          </button>
+
           <button 
             className="slablet-micro-pill" 
             onClick={() => {
@@ -1373,8 +1526,20 @@ export const SlabletDesktop = ({
           </button>
         </div>
 
-        {/* Mobile Micro-Pill */}
+        {/* Mobile Micro-Pills */}
         <div className="flex md:hidden items-center gap-1.5">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              cycleZTier();
+            }}
+            className="flex items-center gap-1 px-2 py-0.5 rounded bg-black/60 border border-[#38bdf8]/50 text-[#38bdf8] text-[9.5px] font-mono cursor-pointer"
+            title="Cycle Z-Depth Spyglass"
+          >
+            <Eye className="w-2.5 h-2.5" />
+            <span>{zTier.toUpperCase()}</span>
+          </button>
+
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -1402,6 +1567,7 @@ export const SlabletDesktop = ({
         totalNodesOnLayer={nodesOnActiveLayer.length}
         preferences={wheelPreferences}
         deityColor={currentLayerIndex === -1 ? '#00ffcc' : (activePatronPalette?.primaryHex || '#39ff14')}
+        wayfinderHistory={wayfinderHistory}
         onLayerChange={(l) => {
           setCurrentLayerIndex(l);
           setCurrentNodeIndex(0);
@@ -1410,6 +1576,24 @@ export const SlabletDesktop = ({
         onActivateNode={() => handleActivateNode()}
         onExecuteMacro={(macroId) => handleExecuteMacro(macroId)}
         onOpenCalibration={() => launchWindow('custom', 'OS & Astrolabe Calibration', '#39ff14')}
+        onSelectWayfinder={(item) => {
+          setCurrentLayerIndex(item.layerIndex);
+          focusWindow(item.id);
+        }}
+      />
+
+      {/* 4-Step Interactive Onboarding Tutorial */}
+      <OSTutorialOverlay
+        isOpen={isTutorialOpen}
+        onClose={() => {
+          setIsTutorialOpen(false);
+          try {
+            localStorage.setItem('konran_os_tutorial_done', 'true');
+          } catch {
+            // ignore
+          }
+        }}
+        deityColor={activePatronPalette?.primaryHex}
       />
 
       <div className="slablet-signal"><Radio aria-hidden="true" /> MAGITECH SIGNAL STABLE</div>
