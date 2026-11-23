@@ -160,12 +160,24 @@
   .astral-vertical-spine {
     right: 2%;
     gap: 4px;
-    padding: 6px 4px;
+    padding: 5px 3px;
   }
   .astral-spine-layer-pip span {
     display: none;
   }
-  .astral-satellite-node span {
-    font-size: 9px;
+  .astral-satellite-node {
+    padding: 2px 6px;
+    max-width: min(120px, 32vw);
+    font-size: 8.5px;
+    gap: 4px;
+  }
+  .astral-satellite-node span.font-bold {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 80px;
+  }
+  .astral-satellite-node .astral-node-code-badge {
+    display: none;
   }
 }
