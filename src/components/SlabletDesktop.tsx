@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   ArrowUpRight,
   BookOpen,
@@ -53,6 +53,11 @@ import { AllegianceNodeView } from './AllegianceNodeView';
 import { CharacterCreatorNodeView } from './CharacterCreatorNodeView';
 import { ColdStartIgnition } from './ColdStartIgnition';
 import { LITURGICAL_PALETTES } from './FatedBadgeToken';
+import { AstrolabeController } from './AstrolabeController';
+import { AstralLayerSpine } from './AstralLayerSpine';
+import { OSCalibrationPanel } from './OSCalibrationPanel';
+import { DEFAULT_ANCHORED_LAYERS, OSLayer, OSNode } from '../types/slabletOS';
+import { INITIAL_OS_NODES } from '../data/osNodesData';
 import { CanvasWindowState, TerminalWindowType } from '../types';
 import './SlabletDesktop.css';
 
@@ -75,7 +80,7 @@ const DEFAULT_WINDOWS: CanvasWindowState[] = [
     isOpen: true,
     isMinimized: false,
     isMaximized: false,
-    position: { x: 24, y: 72 },
+    position: { x: 16, y: 56 },
     size: { width: 440, height: 520 },
     zIndex: 10,
     customData: { accentColor: '#ffcc00' }
@@ -87,7 +92,12 @@ const DEFAULT_WINDOWS: CanvasWindowState[] = [
     isOpen: true,
     isMinimized: false,
     isMaximized: false,
-    position: { x: 740, y: 72 },
+    position: {
+      x: typeof window !== 'undefined' && window.innerWidth < 1200
+        ? Math.max(16, window.innerWidth - 460)
+        : 740,
+      y: 56
+    },
     size: { width: 440, height: 420 },
     zIndex: 11,
     customData: {
@@ -117,9 +127,19 @@ export const SlabletDesktop = ({
     activeCharacter, 
     setActiveCharacterId, 
     disconnectDiscordAccount, 
-    resetDeityTrial 
+    resetDeityTrial,
+    syncToLedgerSheet,
+    wheelPreferences,
+    updateWheelPreferences,
+    customPortals,
+    addCustomPortal,
+    removeCustomPortal,
   } = useCharacter();
   const [isRosterOpen, setIsRosterOpen] = useState(false);
+
+  // Spatial OS Layer & Node Graph Navigation State
+  const [currentLayerIndex, setCurrentLayerIndex] = useState<number>(0);
+  const [currentNodeIndex, setCurrentNodeIndex] = useState<number>(0);
 
   const toggleRole = () => {
     playKeyClick();
@@ -260,16 +280,26 @@ export const SlabletDesktop = ({
       else if (type === 'character-creator') { width = Math.min(760, Math.max(360, window.innerWidth - 40)); height = Math.min(720, Math.max(420, window.innerHeight - 110)); }
       else if (type === 'party') { width = 520; height = 460; }
       else if (type === 'export-5e') { width = 480; height = 520; }
-      else if (type === 'custom') { width = 440; height = 380; }
+      else if (type === 'custom') { width = 440; height = 420; }
+
+      // Clamp window size on mobile screens
+      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        width = Math.min(width, Math.max(280, window.innerWidth - 16));
+        height = Math.min(height, Math.max(340, window.innerHeight - 84));
+      }
+
+      const safeMaxX = typeof window !== 'undefined' ? Math.max(8, window.innerWidth - width - 8) : 100;
+      const safeMaxY = typeof window !== 'undefined' ? Math.max(46, window.innerHeight - height - 38) : 100;
 
       const existing = prev.find(w => w.type === type && (type !== 'custom' || w.title === title));
       if (existing) {
-        const centeredX = type === 'kamp' || type === 'kamp-quiz' || type === 'fated-questionnaire'
-          ? Math.max(12, Math.round((window.innerWidth - width) / 2))
-          : Math.min(Math.max(12, existing.position.x), Math.max(12, window.innerWidth - width - 20));
-        const centeredY = type === 'kamp' || type === 'kamp-quiz' || type === 'fated-questionnaire'
-          ? Math.max(60, Math.round((window.innerHeight - height) / 2))
-          : Math.min(Math.max(60, existing.position.y), Math.max(60, window.innerHeight - 120));
+        const isCentered = type === 'kamp' || type === 'kamp-quiz' || type === 'fated-questionnaire';
+        const centeredX = isCentered
+          ? Math.max(8, Math.round((window.innerWidth - width) / 2))
+          : Math.min(Math.max(8, existing.position.x), safeMaxX);
+        const centeredY = isCentered
+          ? Math.max(46, Math.round((window.innerHeight - height) / 2))
+          : Math.min(Math.max(46, existing.position.y), safeMaxY);
 
         return prev.map(w => w.id === existing.id ? {
           ...w,
@@ -285,11 +315,14 @@ export const SlabletDesktop = ({
       const count = prev.filter(w => w.isOpen).length;
       const isCentered = type === 'kamp' || type === 'kamp-quiz' || type === 'fated-questionnaire' || type === 'character-creator';
       const offsetX = isCentered
-        ? Math.max(12, Math.round((window.innerWidth - width) / 2))
-        : 50 + (count % 5) * 35;
+        ? Math.max(8, Math.round((window.innerWidth - width) / 2))
+        : 24 + (count % 5) * 30;
       const offsetY = isCentered
-        ? Math.max(60, Math.round((window.innerHeight - height) / 2))
-        : 80 + (count % 4) * 30;
+        ? Math.max(46, Math.round((window.innerHeight - height) / 2))
+        : 60 + (count % 4) * 25;
+
+      const clampedX = Math.max(8, Math.min(offsetX, safeMaxX));
+      const clampedY = Math.max(46, Math.min(offsetY, safeMaxY));
 
       const newWin: CanvasWindowState = {
         id: `node-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
@@ -298,7 +331,7 @@ export const SlabletDesktop = ({
         isOpen: true,
         isMinimized: false,
         isMaximized: false,
-        position: { x: Math.min(Math.max(12, window.innerWidth - width - 16), Math.max(12, offsetX)), y: Math.max(60, offsetY) },
+        position: { x: clampedX, y: clampedY },
         size: { width, height },
         zIndex: nextZIndex.current,
         customData: {
@@ -311,7 +344,7 @@ export const SlabletDesktop = ({
     });
 
     showSystemNotice(`TERMINAL NODE ATTACHED // ${title.toUpperCase()}`);
-  }, []);
+  }, [showSystemNotice]);
 
   // Arrange / Cascade windows
   const cascadeWindows = () => {
@@ -346,6 +379,91 @@ export const SlabletDesktop = ({
     setRadialMenuPos({ x, y });
     playKeyClick();
   };
+
+  // Spatial OS Layers & Node Graph Stack
+  const allLayers: OSLayer[] = useMemo(() => {
+    return [...DEFAULT_ANCHORED_LAYERS, ...customPortals];
+  }, [customPortals]);
+
+  const maxLayerIndex = useMemo(() => {
+    if (allLayers.length === 0) return 5;
+    return Math.max(...allLayers.map(l => l.index));
+  }, [allLayers]);
+
+  const currentLayer = useMemo(() => {
+    return allLayers.find(l => l.index === currentLayerIndex) || allLayers[1];
+  }, [allLayers, currentLayerIndex]);
+
+  const allNodes: OSNode[] = useMemo(() => {
+    const customNodes: OSNode[] = customPortals.map(p => ({
+      id: `node-portal-${p.index}`,
+      title: p.name,
+      layerIndex: p.index,
+      code: p.code,
+      icon: p.isCampaign ? 'Compass' : 'Terminal',
+      windowType: p.isCampaign ? 'lore-atlas' : 'custom',
+      windowTitle: `${p.name} // ${p.code}`,
+      windowColor: p.color || '#a855f7',
+      visibleOnLayers: [p.index],
+      description: p.description,
+      badgeText: p.isCampaign ? 'CAMPAIGN' : 'PORTAL',
+    }));
+    return [...INITIAL_OS_NODES, ...customNodes];
+  }, [customPortals]);
+
+  const nodesOnActiveLayer = useMemo(() => {
+    return allNodes.filter(n => n.visibleOnLayers.includes(currentLayerIndex));
+  }, [allNodes, currentLayerIndex]);
+
+  const currentNode = nodesOnActiveLayer[currentNodeIndex] || nodesOnActiveLayer[0];
+
+  const handleActivateNode = useCallback((nodeToActivate?: OSNode) => {
+    const target = nodeToActivate || currentNode;
+    if (target) {
+      launchWindow(target.windowType, target.windowTitle || target.title, target.windowColor);
+    }
+  }, [currentNode, launchWindow]);
+
+  const handleExecuteMacro = useCallback((macroId: string) => {
+    const slot = wheelPreferences.macros.find(m => m.id === macroId);
+    if (!slot) return;
+
+    switch (slot.action) {
+      case 'roll-resonance':
+        launchWindow('character-sheet', '5.5e Sheet, Inventory & Clergy');
+        showSystemNotice('RESONANCE DICE // ROLLED D6 SOUL RECHARGE');
+        break;
+      case 'open-chronometron':
+        launchWindow('chronometron', 'Grand Chronometron (36h)');
+        break;
+      case 'export-5e':
+        launchWindow('export-5e', 'Walter Kammerer 5e Mobile Exporter');
+        break;
+      case 'sync-sheet':
+        syncToLedgerSheet().then(res => {
+          showSystemNotice(res.success ? 'GOOGLE SHEETS SYNC COMPLETE' : 'SYNC NOTICE: CHECK WEBHOOK URL');
+        });
+        break;
+      case 'jump-substrate':
+        setCurrentLayerIndex(-1);
+        showSystemNotice('SPATIAL ELEVATION SHIFT // LAYER -1 SUBSTRATE ARPANET ACTIVE');
+        break;
+      case 'toggle-lock':
+        setIsIgnited(false);
+        break;
+      case 'quick-lore':
+        launchWindow('lore-atlas', 'Grand Codex & Atlas // LegendKeeper Live', '#ffd700');
+        break;
+      case 'cascade-windows':
+        cascadeWindows();
+        break;
+      case 'open-settings':
+        launchWindow('custom', 'OS & Astrolabe Calibration', '#39ff14');
+        break;
+      default:
+        break;
+    }
+  }, [wheelPreferences, launchWindow, showSystemNotice, syncToLedgerSheet, cascadeWindows]);
 
   const celestialState = getKonranGrandState(now);
   const { hourAngle, minuteAngle, secondAngle, isNightwatch, timeString, liturgicalDay } = celestialState;
@@ -648,8 +766,25 @@ export const SlabletDesktop = ({
           {/* Sacred Celestial Astrolabe Dynamic Kinetic Mandala Circuitry (Adapts to Active Nyne Color) */}
           <KonranMandalaOverlay
             patronId={activeCharacter?.declaredDeity}
-            primaryColor={activePatronPalette?.primaryHex}
-            busColor={activePatronPalette?.busHex}
+            primaryColor={currentLayerIndex === -1 ? '#00ffcc' : activePatronPalette?.primaryHex}
+            busColor={currentLayerIndex === -1 ? '#00bb99' : activePatronPalette?.busHex}
+          />
+
+          {/* Spatial OS Astral Layer Spine & Satellite Node Constellation (Strictly r >= 308px) */}
+          <AstralLayerSpine
+            layers={allLayers}
+            activeLayerIndex={currentLayerIndex}
+            nodes={allNodes}
+            activeNodeIndex={currentNodeIndex}
+            userClearance={account.role === 'archivist' ? 3 : (activeCharacter?.declaredDeity ? 2 : 1)}
+            deityColor={currentLayerIndex === -1 ? '#00ffcc' : (activePatronPalette?.primaryHex || '#39ff14')}
+            onSelectLayer={(l) => {
+              setCurrentLayerIndex(l);
+              setCurrentNodeIndex(0);
+            }}
+            onSelectNode={(n) => setCurrentNodeIndex(n)}
+            onActivateNode={(node) => handleActivateNode(node)}
+            onAddPortal={() => launchWindow('custom', 'OS & Astrolabe Calibration', '#a855f7')}
           />
 
           <div className="slablet-moon-labels" aria-label="Orbiting moons">
@@ -871,11 +1006,22 @@ export const SlabletDesktop = ({
             )}
 
             {win.type === 'custom' && (
-              <CustomTerminalView
-                window={win}
-                onUpdateWindow={(updated) => updateWindowData(win.id, updated)}
-                onLaunchWindow={(type, title) => launchWindow(type, title)}
-              />
+              win.customData?.terminalName === 'OS & Astrolabe Calibration' ? (
+                <OSCalibrationPanel
+                  preferences={wheelPreferences}
+                  layers={allLayers}
+                  onUpdatePreferences={updateWheelPreferences}
+                  onAddCustomPortal={addCustomPortal}
+                  onRemoveCustomPortal={removeCustomPortal}
+                  onClose={() => closeWindow(win.id)}
+                />
+              ) : (
+                <CustomTerminalView
+                  window={win}
+                  onUpdateWindow={(updated) => updateWindowData(win.id, updated)}
+                  onLaunchWindow={(type, title) => launchWindow(type, title)}
+                />
+              )
             )}
           </FloatingTerminalNode>
         ))}
@@ -1204,6 +1350,17 @@ export const SlabletDesktop = ({
           </button>
 
           <button 
+            className="slablet-micro-pill" 
+            onClick={() => {
+              playKeyClick();
+              launchWindow('custom', 'OS & Astrolabe Calibration', '#39ff14');
+            }}
+            title="Configure Astrolabe Scale, Spacing & Macro Slots"
+          >
+            <span>Dial</span>
+          </button>
+
+          <button 
             className="slablet-micro-pill slablet-micro-pill--accent" 
             onClick={() => {
               playKeyClick();
@@ -1233,6 +1390,28 @@ export const SlabletDesktop = ({
           </button>
         </div>
       </footer>
+
+      {/* Dynamic Astrolabe Click-Wheel Radial Controller */}
+      <AstrolabeController
+        currentLayer={currentLayer}
+        currentLayerIndex={currentLayerIndex}
+        maxLayerIndex={maxLayerIndex}
+        minLayerIndex={-1}
+        currentNode={currentNode}
+        currentNodeIndex={currentNodeIndex}
+        totalNodesOnLayer={nodesOnActiveLayer.length}
+        preferences={wheelPreferences}
+        deityColor={currentLayerIndex === -1 ? '#00ffcc' : (activePatronPalette?.primaryHex || '#39ff14')}
+        onLayerChange={(l) => {
+          setCurrentLayerIndex(l);
+          setCurrentNodeIndex(0);
+        }}
+        onNodeChange={(n) => setCurrentNodeIndex(n)}
+        onActivateNode={() => handleActivateNode()}
+        onExecuteMacro={(macroId) => handleExecuteMacro(macroId)}
+        onOpenCalibration={() => launchWindow('custom', 'OS & Astrolabe Calibration', '#39ff14')}
+      />
+
       <div className="slablet-signal"><Radio aria-hidden="true" /> MAGITECH SIGNAL STABLE</div>
     </main>
   );

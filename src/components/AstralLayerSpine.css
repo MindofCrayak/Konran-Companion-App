@@ -1,0 +1,171 @@
+/* Astral Layer Spine & Spatial Node Constellation */
+
+.astral-spine-overlay {
+  position: absolute;
+  inset: -12%;
+  pointer-events: none;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+/* Linear Vertical Spine HUD (Stationed along right edge outside planet) */
+.astral-vertical-spine {
+  position: absolute;
+  right: 6%;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+  z-index: 10;
+  background: rgba(3, 8, 6, 0.75);
+  backdrop-filter: blur(8px);
+  padding: 8px 6px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+.astral-spine-axis-line {
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    var(--deity-accent, #39ff14) 50%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  z-index: 1;
+}
+
+.astral-spine-layer-pip {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.6);
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.astral-spine-layer-pip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.astral-spine-layer-pip--active {
+  background: var(--layer-color, var(--deity-accent, #39ff14)) !important;
+  color: #030804 !important;
+  font-weight: bold;
+  border-color: #fff !important;
+  box-shadow: 0 0 12px var(--layer-color, var(--deity-accent, #39ff14));
+}
+
+.astral-spine-pip-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Horizontal Orbiting Satellite Nodes (r >= 315px, outside planet) */
+.astral-satellite-node {
+  position: absolute;
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 14px;
+  background: rgba(4, 11, 7, 0.88);
+  border: 1px solid var(--node-color, var(--deity-accent, #39ff14));
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.8), 0 0 6px var(--node-glow, rgba(57, 255, 20, 0.25));
+  cursor: pointer;
+  color: #fff;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+  z-index: 8;
+}
+
+.astral-satellite-node:hover,
+.astral-satellite-node--selected {
+  transform: translate(-50%, -50%) scale(1.12);
+  border-color: #fff;
+  box-shadow: 0 0 18px var(--node-color, var(--deity-accent, #39ff14)), 0 0 30px var(--node-glow, rgba(57, 255, 20, 0.5));
+}
+
+.astral-satellite-node--selected {
+  background: var(--node-color, var(--deity-accent, #39ff14)) !important;
+  color: #030804 !important;
+  font-weight: bold;
+}
+
+.astral-node-code-badge {
+  font-size: 8px;
+  opacity: 0.8;
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.astral-satellite-node--selected .astral-node-code-badge {
+  background: rgba(0, 0, 0, 0.2);
+  color: #030804;
+}
+
+/* Active Layer Banner HUD (Bottom Center of Stage) */
+.astral-layer-banner {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 12px;
+  border-radius: 12px;
+  background: rgba(3, 8, 5, 0.85);
+  border: 1px solid var(--deity-accent, #39ff14);
+  box-shadow: 0 0 12px var(--deity-glow, rgba(57, 255, 20, 0.25));
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  color: #fff;
+  pointer-events: auto;
+  z-index: 10;
+}
+
+.astral-layer-banner-code {
+  font-weight: 800;
+  color: var(--deity-accent, #39ff14);
+}
+
+@media (max-width: 768px) {
+  .astral-vertical-spine {
+    right: 2%;
+    gap: 4px;
+    padding: 6px 4px;
+  }
+  .astral-spine-layer-pip span {
+    display: none;
+  }
+  .astral-satellite-node span {
+    font-size: 9px;
+  }
+}

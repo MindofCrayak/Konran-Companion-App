@@ -1,0 +1,153 @@
+/* Astrolabe Radial Click-Wheel Controller Styles */
+
+.astrolabe-controller-root {
+  position: fixed;
+  z-index: 55;
+  bottom: 40px;
+  touch-action: none;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.astrolabe-controller-root--left {
+  left: 16px;
+}
+
+.astrolabe-controller-root--right {
+  right: 16px;
+}
+
+/* 2-Stage Idle Ghost Mode */
+.astrolabe-controller-root--ghost {
+  opacity: 0.18 !important;
+  transform: scale(0.65) !important;
+  filter: grayscale(0.5);
+  cursor: pointer;
+}
+
+.astrolabe-controller-root--ghost:hover {
+  opacity: 0.65 !important;
+  transform: scale(0.85) !important;
+}
+
+/* Core Dial */
+.astrolabe-core-dial {
+  position: relative;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgba(18, 30, 22, 0.95), rgba(4, 9, 6, 0.98));
+  border: 1.5px solid var(--deity-accent, #39ff14);
+  box-shadow: 0 0 15px var(--deity-glow, rgba(57, 255, 20, 0.35)), inset 0 0 8px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.astrolabe-core-dial:active {
+  cursor: grabbing;
+  box-shadow: 0 0 24px var(--deity-accent, #39ff14), inset 0 0 12px rgba(0, 0, 0, 0.9);
+}
+
+/* Substrate -1 Wireframe Visual Mode */
+.astrolabe-controller-root--substrate .astrolabe-core-dial {
+  border-color: #00ffcc !important;
+  box-shadow: 0 0 18px rgba(0, 255, 204, 0.5), inset 0 0 10px rgba(0, 255, 204, 0.2) !important;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(0, 20, 16, 0.95),
+    rgba(0, 20, 16, 0.95) 4px,
+    rgba(0, 40, 32, 0.95) 4px,
+    rgba(0, 40, 32, 0.95) 8px
+  ) !important;
+  animation: substrate-chromatic 2s infinite alternate;
+}
+
+@keyframes substrate-chromatic {
+  0% { filter: drop-shadow(-1px 0 2px rgba(255, 0, 100, 0.4)) drop-shadow(1px 0 2px rgba(0, 255, 204, 0.6)); }
+  100% { filter: drop-shadow(1px 0 2px rgba(255, 0, 100, 0.4)) drop-shadow(-1px 0 2px rgba(0, 255, 204, 0.6)); }
+}
+
+/* Core Compass Gyroscope Ring */
+.astrolabe-gyro-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px dashed var(--deity-accent, #39ff14);
+  opacity: 0.45;
+  pointer-events: none;
+  animation: gyro-rotate 120s linear infinite;
+}
+
+@keyframes gyro-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Core Label Typography */
+.astrolabe-dial-layer-code {
+  font-family: 'TemplateGothic', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--deity-accent, #39ff14);
+  line-height: 1;
+}
+
+.astrolabe-dial-node-tag {
+  font-family: ui-monospace, monospace;
+  font-size: 8px;
+  color: #fff;
+  opacity: 0.8;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+/* SVG Circuit Trace Canvas */
+.astrolabe-svg-traces {
+  position: absolute;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 1;
+}
+
+/* Radial Arc Buttons */
+.astrolabe-arc-button {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(4, 12, 8, 0.94);
+  border: 1.2px solid var(--deity-accent, #39ff14);
+  color: var(--deity-accent, #39ff14);
+  box-shadow: 0 0 10px var(--deity-glow, rgba(57, 255, 20, 0.3));
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s, border-color 0.18s, box-shadow 0.18s;
+  z-index: 2;
+}
+
+.astrolabe-arc-button:hover,
+.astrolabe-arc-button--highlighted {
+  transform: scale(1.18) !important;
+  background: var(--deity-accent, #39ff14) !important;
+  color: #030804 !important;
+  box-shadow: 0 0 18px var(--deity-accent, #39ff14), 0 0 30px var(--deity-glow, rgba(57, 255, 20, 0.6)) !important;
+}
+
+.astrolabe-macro-button {
+  width: 26px;
+  height: 26px;
+  font-size: 10px;
+}
+
+.astrolabe-nav-button {
+  width: 30px;
+  height: 30px;
+  font-size: 12px;
+}

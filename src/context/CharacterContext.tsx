@@ -11,10 +11,13 @@ import {
   QuizScores
 } from '../types';
 import { DEITIES } from '../data/deities';
+import { WheelPreferences, OSLayer, DEFAULT_WHEEL_PREFERENCES } from '../types/slabletOS';
 
 // Local storage keys
 const STORAGE_KEY_ACCOUNT = 'konra_player_account_v1';
 const STORAGE_KEY_CHARACTERS = 'konra_character_roster_v1';
+const STORAGE_KEY_WHEEL_PREFS = 'konran_wheel_prefs_v1';
+const STORAGE_KEY_CUSTOM_PORTALS = 'konran_custom_portals_v1';
 
 // Seed default player account
 const DEFAULT_ACCOUNT: PlayerAccount = {
@@ -259,6 +262,11 @@ interface CharacterContextType {
   }) => void;
   disconnectDiscordAccount: () => void;
   syncToLedgerSheet: () => Promise<{ success: boolean; message?: string }>;
+  wheelPreferences: WheelPreferences;
+  updateWheelPreferences: (prefs: WheelPreferences) => void;
+  customPortals: OSLayer[];
+  addCustomPortal: (portal: { name: string; code: string; color: string; isCampaign?: boolean }) => void;
+  removeCustomPortal: (index: number) => void;
 }
 
 const CharacterContext = createContext<CharacterContextType | undefined>(undefined);
@@ -297,6 +305,72 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
     return SEED_CHARACTERS;
   });
+
+  // Astrolabe Controller & Spatial OS Preferences
+  const [wheelPreferences, setWheelPreferences] = useState<WheelPreferences>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_WHEEL_PREFS);
+      if (stored) return JSON.parse(stored);
+    } catch {
+      // Ignore
+    }
+    return DEFAULT_WHEEL_PREFERENCES;
+  });
+
+  const updateWheelPreferences = useCallback((prefs: WheelPreferences) => {
+    setWheelPreferences(prefs);
+    try {
+      localStorage.setItem(STORAGE_KEY_WHEEL_PREFS, JSON.stringify(prefs));
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  // Custom Upper Portals (6+) and Campaign Portals
+  const [customPortals, setCustomPortals] = useState<OSLayer[]>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_CUSTOM_PORTALS);
+      if (stored) return JSON.parse(stored);
+    } catch {
+      // Ignore
+    }
+    return [];
+  });
+
+  const addCustomPortal = useCallback((portal: { name: string; code: string; color: string; isCampaign?: boolean }) => {
+    setCustomPortals(prev => {
+      const nextIndex = prev.length > 0 ? Math.max(...prev.map(p => p.index)) + 1 : 6;
+      const newLayer: OSLayer = {
+        index: nextIndex,
+        code: portal.code,
+        name: portal.name,
+        type: portal.isCampaign ? 'campaign' : 'custom',
+        description: portal.isCampaign ? 'LegendKeeper GM Campaign Portal' : 'Custom User Portal Layer',
+        color: portal.color,
+        isCustom: !portal.isCampaign,
+        isCampaign: portal.isCampaign,
+      };
+      const updated = [...prev, newLayer];
+      try {
+        localStorage.setItem(STORAGE_KEY_CUSTOM_PORTALS, JSON.stringify(updated));
+      } catch {
+        // Ignore
+      }
+      return updated;
+    });
+  }, []);
+
+  const removeCustomPortal = useCallback((index: number) => {
+    setCustomPortals(prev => {
+      const updated = prev.filter(p => p.index !== index);
+      try {
+        localStorage.setItem(STORAGE_KEY_CUSTOM_PORTALS, JSON.stringify(updated));
+      } catch {
+        // Ignore
+      }
+      return updated;
+    });
+  }, []);
 
   // Sync state to localStorage
   useEffect(() => {
@@ -856,6 +930,11 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     connectDiscordAccount,
     disconnectDiscordAccount,
     syncToLedgerSheet,
+    wheelPreferences,
+    updateWheelPreferences,
+    customPortals,
+    addCustomPortal,
+    removeCustomPortal,
   }), [
     account,
     characters,
@@ -876,6 +955,11 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     connectDiscordAccount,
     disconnectDiscordAccount,
     syncToLedgerSheet,
+    wheelPreferences,
+    updateWheelPreferences,
+    customPortals,
+    addCustomPortal,
+    removeCustomPortal,
   ]);
 
   return (
