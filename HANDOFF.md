@@ -124,6 +124,22 @@ When answering user queries or generating content, adhere strictly to these cano
   4. **Unycorn:** Arts, Performance & Diplomacy.
 * *Note:* Legacy names (Pyros, Umbra, Aethelgard, Thalassa, Astralis, Bellona, Paradox, Duath) are obsolete and forbidden.
 
+### D. Spatial OS Architecture (Slablet MK IV)
+* **Astrolabe Radial Click-Wheel:**
+  * Compact gyroscopic dial anchored to bottom-left/right corner (scales from 41.6px ghost lens to 64px active).
+  * Double-tap (`x2`): Expands inner navigation arc with discrete `Up`, `Select`, `Down` controls.
+  * Triple-tap (`x3`): Expands outer arc with 7 customizable macro slots (Resonance, Chronometron, Export 5e, Sync Sheet, Substrate -1, Lotus Lock, LK Atlas).
+  * 2-Stage Idle Dormancy: 3.2s arc fold back to base dial, 6.5s fade to 18% opacity Ghost Lens (wakes instantly on pointer enter/touch).
+  * Dynamic calibration: Dial scale (0.7x-1.4x), arc spacing (0.8x-1.6x), and handedness (Left/Right) configurable via `[Dial]` Calibration Terminal.
+* **Vertical Layer Spine & Infinite Dynamic Portals:**
+  * Linear central spine spanning fixed layers: `-1` Core Substrate / ARPANET, `0` Base, `1` The Nyne Net, `2` Declared Church, `3` User Home, `4` K.A.M.P., `5` ObsydianHeart (`OH`).
+  * Dynamic `+` Portal Stack: Players and DMs can create unlimited custom upper portals (`USR+` and `CMP+` for LegendKeeper campaigns).
+* **Elevation-Locked Astral Node Graph:**
+  * Horizontal constellation orbiting outside the planet core ($r \ge 310\text{px}$).
+  * Clearance-gated visibility: Nodes reveal or restrict access dynamically based on current layer elevation and player clearance.
+* **Planet Konran Core Rule:**
+  * Center diameter ($r < 308\text{px}$) is strictly preserved 100% visible and unblocked. Zero intrusive opaque geometry covers the planet.
+
 ---
 
 ## 6. Cloudflare Pages & Backend Configuration
@@ -168,5 +184,5 @@ git push origin main
 ## 8. Current Backlog & Immediate Next Steps
 
 1. **Cloudflare Dashboard Secrets:** Add `GOOGLE_SHEET_WEBHOOK_URL`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, and `DISCORD_REDIRECT_URI` to enable full Google Sheets syncing and live Discord OAuth.
-2. **Mobile Window Initial Layout:** Adjust initial window spawn logic so default terminals do not overflow horizontal edges on mobile screens (<430px).
-3. **Walter Kammerer 5e Import Verification:** Confirm end-to-end import of custom Konran subrace and class features on physical iOS/Android devices running the app.
+2. **Walter Kammerer 5e Import Verification:** Confirm end-to-end import of custom Konran subrace and class features on physical iOS/Android devices running the app.
+3. **DM Campaign Portal Integration:** Connect dynamic `CMP+` upper portals directly to specific LegendKeeper project boards and permission groups.
