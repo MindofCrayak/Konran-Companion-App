@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "1.0.0",
+  "scripts": [
+    {
+      "id": "script_orayic_draconic",
+      "name": "Orayic High-Draconic Telemetry",
+      "dc": 12,
+      "requiredLanguage": "Draconic",
+      "glyphFontClass": "tracking-widest font-mono uppercase",
+      "sampleLockedText": "◊ ŦĦΣ ☼ VΔULT ╬ CØRΣ ◊ RΣQUΙRΣS ☼ BŁØØD-KΣY ╬ AUTHENTICATION ◊",
+      "sampleDecodedText": "THE VAULT CORE REQUIRES BLOOD-KEY AUTHENTICATION AT SUB-LEVEL FOUR.",
+      "hiddenLayerHint": "Noticeable double-struck runes conceal an override frequency: 442.8 MHz (Gate B bypass)."
+    },
+    {
+      "id": "script_slavynian_thorn",
+      "name": "Slavynian Thorn-Cant",
+      "dc": 14,
+      "requiredLanguage": "Sylvan",
+      "glyphFontClass": "tracking-wider font-serif italic",
+      "sampleLockedText": "᚛ᚐᚑᚒ ᚓᚔᚕ ᚖᚗᚘ ᚙᚚ᚛ ᚜᚝᚞ ᚟ᚠᚡ ᚢᚣᚤ ᚥᚦᚧ ᚨᚩᚪ ᚫᚬᚭ᚜",
+      "sampleDecodedText": "ROOT-CONDUIT SEVEN FLOWS BENEATH THE CITADEL GARDEN; POISON THE WELL AT DUSK.",
+      "hiddenLayerHint": "Micro-serrations along the third stave encode a safehouse password: 'WEEPING-WILLOW-9'."
+    },
+    {
+      "id": "script_lyricia_ledger_hex",
+      "name": "Lyrician Guild Ledger-Hex",
+      "dc": 16,
+      "requiredLanguage": "Thieves' Cant",
+      "glyphFontClass": "tracking-tight font-mono",
+      "sampleLockedText": "0x7F::[KЯΔY-99]>>ΣXCHΔNGΣ_TΔX_34%//SMUGGLΣ_DØCK_03::0xE4",
+      "sampleDecodedText": "CARGO MANIFEST 99: 34% TARIFF DIVERTED TO SMUGGLER DOCK 03 UNDER HARBORMASTER SEAL.",
+      "hiddenLayerHint": "Parity byte 0xE4 masks an extortion ledger implicating Councilman Vane in contraband cyberware."
+    },
+    {
+      "id": "script_krayvuk_void_runes",
+      "name": "Krayvuk Void-Runes",
+      "dc": 18,
+      "requiredLanguage": "Deep Speech",
+      "glyphFontClass": "tracking-widest font-mono",
+      "sampleLockedText": "⍙⍚⍛⍜ ⍝⍞⍟⍠ ⍡⍢⍣⍤ ⍥⍦⍧⍨ ⍩⍪⍫⍬ ⍭⍮⍯⍰ ⍱⍲⍳⍴ ⍵⍶⍷⍸",
+      "sampleDecodedText": "WHEN THE THIRD ORBITAL RELAY LOCKS, AWAKEN THE DORMANT DAEMON SWARM IN SECTOR ZERO.",
+      "hiddenLayerHint": "Sub-harmonic spacing between void glyphs reveals a kill-switch vector: 'OMEGA-NULL-77'."
+    }
+  ]
+}

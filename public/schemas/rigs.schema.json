@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "1.0.0",
+  "rigs": [
+    {
+      "id": "deck_novice_slate",
+      "name": "Novice Slate Mk-I",
+      "faction": "Drifters",
+      "tier": 1,
+      "ramBuffer": 4,
+      "jackInSpikeTier": 1,
+      "signalSkimmerTier": 1,
+      "dudPruningCount": 0,
+      "traceSlowdownPct": 0,
+      "description": "Salvaged civilian datapad retrofitted with an exposed copper jack-in spike."
+    },
+    {
+      "id": "deck_oray_mk4",
+      "name": "Oray Tactical Slablet Mk-IV",
+      "faction": "Oray",
+      "tier": 2,
+      "ramBuffer": 6,
+      "jackInSpikeTier": 2,
+      "signalSkimmerTier": 2,
+      "dudPruningCount": 1,
+      "traceSlowdownPct": 15,
+      "description": "Military-grade Oray field deck with hardened daemon buffers and dual-band signal skimming."
+    },
+    {
+      "id": "deck_slavyna_whisper",
+      "name": "Slavyna Whisper-Weave Deck",
+      "faction": "Slavyna",
+      "tier": 3,
+      "ramBuffer": 8,
+      "jackInSpikeTier": 3,
+      "signalSkimmerTier": 3,
+      "dudPruningCount": 2,
+      "traceSlowdownPct": 30,
+      "description": "Bio-luminescent resonant deck engineered to mask intrusion ripples across CoreNet nodes."
+    },
+    {
+      "id": "deck_krayvuk_void",
+      "name": "Krayvuk Void-Engine Prime",
+      "faction": "Krayvuk",
+      "tier": 4,
+      "ramBuffer": 10,
+      "jackInSpikeTier": 4,
+      "signalSkimmerTier": 4,
+      "dudPruningCount": 3,
+      "traceSlowdownPct": 45,
+      "description": "Black-ice obsidian mainframe shard capable of deep-layer daemon injection and near-total trace suppression."
+    }
+  ]
+}

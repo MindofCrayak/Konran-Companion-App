@@ -523,6 +523,15 @@ export function getKonranGrandState(input?: number | Date): KonranGrandState {
   };
 }
 
+/**
+ * Sol-Proportional Canonical 10-Body Celestial System
+ * - Earth baseline radius = 0.30 units -> Konran = 0.42 units (~1.4x Earth radius, matching its 36-hour diurnal period)
+ *   in the Earth-analog habitable orbital track (r = 7.4).
+ * - Other planets match the relative scale and Keplerian orbital progression of their Sol counterparts.
+ */
+export const EARTH_BASELINE_RADIUS = 0.30;
+export const KONRAN_SOL_RADIUS_RATIO = 1.4; // 0.42 / 0.30 = 1.4x Earth
+
 export const CANONICAL_SOLAR_SYSTEM: SolarBody[] = [
   {
     id: 'plane-ayan',
@@ -532,7 +541,7 @@ export const CANONICAL_SOLAR_SYSTEM: SolarBody[] = [
     orbitRadius: 0,
     orbitSpeed: 0,
     color: '#ffffff',
-    size: 0.88,
+    size: 0.96,
     description: 'Bright white core with woven blue and yellow thread-like filaments and stitches, anchoring the celestial harmony of the Nyne.',
     visualStyle: 'filaments',
     legendKeeperResourceId: 'ayan',
@@ -542,16 +551,16 @@ export const CANONICAL_SOLAR_SYSTEM: SolarBody[] = [
     name: 'Kay-Kee (Kayzoku)',
     type: 'planet',
     deityId: 'Kayzoku',
-    orbitRadius: 2.5,
-    orbitSpeed: 0.0075,
+    orbitRadius: 2.4,
+    orbitSpeed: 0.0088,
     color: '#d4b35e',
-    size: 0.28,
+    size: 0.21, // Mercury-analog relative scale
     description: 'Two separated counter-rotating halves on dual reverse orbit: Kay (top, hot desert mushroom-shaped world, clockwise) and Kee (bottom, overflowing water basin/bowl, counterclockwise), aligning annually for The Passing.',
     visualStyle: 'mushroom_basin',
     legendKeeperResourceId: 'kay-kee',
     moons: [
-      { name: 'Kay-Dust 1', color: '#c29d4c', size: 0.05, orbitDistance: 0.45, orbitSpeed: 0.02 },
-      { name: 'Kee-Spray 2', color: '#7dd3fc', size: 0.06, orbitDistance: 0.58, orbitSpeed: -0.015 },
+      { name: 'Kay-Dust 1', color: '#c29d4c', size: 0.045, orbitDistance: 0.42, orbitSpeed: 0.022 },
+      { name: 'Kee-Spray 2', color: '#7dd3fc', size: 0.05, orbitDistance: 0.54, orbitSpeed: -0.017 },
     ],
   },
   {
@@ -559,21 +568,21 @@ export const CANONICAL_SOLAR_SYSTEM: SolarBody[] = [
     name: 'Synthelavor (Slavyna)',
     type: 'planet',
     deityId: 'Slavyna',
-    orbitRadius: 4.0,
-    orbitSpeed: 0.0055,
+    orbitRadius: 3.9,
+    orbitSpeed: 0.0064,
     color: '#ef4444',
-    size: 0.36,
+    size: 0.32, // Venus-analog forge world scale
     hasRings: true,
     ringColor: '#b91c1c',
     description: 'Scorched volcanic and industrial sphere encircled by glittering red dust rings, a swirling magenta-red nebula shroud, and five orbiting moons.',
     visualStyle: 'volcanic_dust',
     legendKeeperResourceId: 'synthelavor',
     moons: [
-      { name: 'Tatyon', color: '#f87171', size: 0.06, orbitDistance: 0.58, orbitSpeed: 0.024 },
-      { name: 'Odahs', color: '#a855f7', size: 0.05, orbitDistance: 0.72, orbitSpeed: 0.018 },
-      { name: 'Kark', color: '#78716c', size: 0.07, orbitDistance: 0.88, orbitSpeed: 0.014 },
-      { name: 'Syndavaria', color: '#fb923c', size: 0.055, orbitDistance: 1.05, orbitSpeed: 0.011 },
-      { name: 'Hemalod', color: '#e11d48', size: 0.065, orbitDistance: 1.22, orbitSpeed: 0.008 },
+      { name: 'Tatyon', color: '#f87171', size: 0.055, orbitDistance: 0.56, orbitSpeed: 0.024 },
+      { name: 'Odahs', color: '#a855f7', size: 0.048, orbitDistance: 0.70, orbitSpeed: 0.018 },
+      { name: 'Kark', color: '#78716c', size: 0.062, orbitDistance: 0.85, orbitSpeed: 0.014 },
+      { name: 'Syndavaria', color: '#fb923c', size: 0.052, orbitDistance: 1.00, orbitSpeed: 0.011 },
+      { name: 'Hemalod', color: '#e11d48', size: 0.058, orbitDistance: 1.15, orbitSpeed: 0.008 },
     ],
   },
   {
@@ -581,19 +590,19 @@ export const CANONICAL_SOLAR_SYSTEM: SolarBody[] = [
     name: 'Lona Uyn (Lyricia/Olyvia)',
     type: 'planet',
     deityId: 'Lyricia',
-    orbitRadius: 5.6,
-    orbitSpeed: 0.0042,
+    orbitRadius: 5.5,
+    orbitSpeed: 0.0049,
     color: '#38bdf8',
-    size: 0.34,
+    size: 0.30, // Earth-sister archipelago scale (1.0x Earth baseline)
     hasRings: true,
     ringColor: '#ec4899',
     description: 'Azure water and green land laced with glowing bioluminescent crystal veins, floating aerial rock islands, a vibrant ring halo, and three moons.',
     visualStyle: 'aerial_islands',
     legendKeeperResourceId: 'lona-uyn',
     moons: [
-      { name: 'Kelth (Gold)', color: '#fbbf24', size: 0.07, orbitDistance: 0.65, orbitSpeed: 0.02 },
-      { name: 'Zorm (Steel Forge)', color: '#94a3b8', size: 0.065, orbitDistance: 0.84, orbitSpeed: 0.015 },
-      { name: 'Sylef (Night Rune)', color: '#a855f7', size: 0.06, orbitDistance: 1.02, orbitSpeed: 0.011 },
+      { name: 'Kelth (Gold)', color: '#fbbf24', size: 0.065, orbitDistance: 0.62, orbitSpeed: 0.02 },
+      { name: 'Zorm (Steel Forge)', color: '#94a3b8', size: 0.06, orbitDistance: 0.80, orbitSpeed: 0.015 },
+      { name: 'Sylef (Night Rune)', color: '#a855f7', size: 0.055, orbitDistance: 0.98, orbitSpeed: 0.011 },
     ],
   },
   {
@@ -601,11 +610,11 @@ export const CANONICAL_SOLAR_SYSTEM: SolarBody[] = [
     name: 'Konran (Capital & Mortal Cradle)',
     type: 'planet',
     deityId: 'Ay',
-    orbitRadius: 7.2,
-    orbitSpeed: 0.0034,
+    orbitRadius: 7.4,
+    orbitSpeed: 0.0038,
     color: '#22c55e',
-    size: 0.42,
-    description: 'Multi-continent world of the Nyne, K.A.M.P., and Mortal Crucible (preserving center clarity) with moons Olysphere and Ayanath.',
+    size: 0.42, // ~1.4x Earth baseline radius (36h diurnal period in habitable zone)
+    description: 'Multi-continent habitable world (~1.4x Earth radius, 36-hour rotation) of the Nyne, K.A.M.P., and Mortal Crucible with moons Olysphere and Ayanath.',
     legendKeeperResourceId: 'konran',
     moons: [
       { name: 'Olysphere (Luna Prime)', color: '#fef08a', size: 0.09, orbitDistance: 0.68, orbitSpeed: 0.025 },
@@ -617,15 +626,15 @@ export const CANONICAL_SOLAR_SYSTEM: SolarBody[] = [
     name: 'Cadence (Vevayun/Celeste)',
     type: 'planet',
     deityId: 'Celeste',
-    orbitRadius: 8.8,
-    orbitSpeed: 0.0028,
+    orbitRadius: 9.2,
+    orbitSpeed: 0.0029,
     color: '#10b981',
-    size: 0.31,
+    size: 0.25, // Mars-analog classical marble world scale
     description: 'Emerald Greco-Roman valleys, white marble amphitheaters, and high mountain peaks under a radiant celestial sky.',
     visualStyle: 'greco_roman',
     legendKeeperResourceId: 'cadence',
     moons: [
-      { name: 'Vevayun Ward', color: '#c4b5fd', size: 0.06, orbitDistance: 0.58, orbitSpeed: 0.02 },
+      { name: 'Vevayun Ward', color: '#c4b5fd', size: 0.055, orbitDistance: 0.54, orbitSpeed: 0.02 },
     ],
   },
   {
@@ -633,18 +642,18 @@ export const CANONICAL_SOLAR_SYSTEM: SolarBody[] = [
     name: 'Dyata / Yngolcina (Oray)',
     type: 'planet',
     deityId: 'Oray',
-    orbitRadius: 10.4,
+    orbitRadius: 11.4,
     orbitSpeed: 0.0022,
     color: '#d97706',
-    size: 0.38,
+    size: 0.56, // Jupiter-analog massive dragon-eye caldera giant
     hasRings: true,
     ringColor: '#f59e0b',
-    description: 'Volcanic dragon-forged world resembling a massive dragon eye with a glowing/crumbling magical void caldera core and orbiting celestial bodies.',
+    description: 'Massive volcanic dragon-forged giant resembling a dragon eye with a glowing/crumbling magical void caldera core and orbiting celestial bodies.',
     visualStyle: 'dragon_eye',
     legendKeeperResourceId: 'dyata',
     moons: [
-      { name: 'Yngol Pearl', color: '#fcd34d', size: 0.065, orbitDistance: 0.68, orbitSpeed: 0.021 },
-      { name: 'Caldera Sentinel', color: '#10b981', size: 0.055, orbitDistance: 0.92, orbitSpeed: 0.015 },
+      { name: 'Yngol Pearl', color: '#fcd34d', size: 0.075, orbitDistance: 0.86, orbitSpeed: 0.021 },
+      { name: 'Caldera Sentinel', color: '#10b981', size: 0.065, orbitDistance: 1.12, orbitSpeed: 0.015 },
     ],
   },
   {
@@ -652,17 +661,17 @@ export const CANONICAL_SOLAR_SYSTEM: SolarBody[] = [
     name: 'Vaya Mar & Lantyca (Ousava)',
     type: 'planet',
     deityId: 'Ousava',
-    orbitRadius: 12.0,
-    orbitSpeed: 0.0018,
+    orbitRadius: 13.8,
+    orbitSpeed: 0.0017,
     color: '#0284c7',
-    size: 0.35,
-    description: 'Deep oceanic world paired with massive rainforest moon Lantyca; 8-month wet/dry tidal cycle where Lantyca close pass pulls sky-waterspouts between worlds.',
+    size: 0.48, // Saturn-analog oceanic giant paired with rainforest moon Lantyca
+    description: 'Deep oceanic giant paired with massive rainforest moon Lantyca; 8-month wet/dry tidal cycle where Lantyca close pass pulls sky-waterspouts between worlds.',
     visualStyle: 'rainforest_spouts',
     legendKeeperResourceId: 'vaya-mar',
     moons: [
-      { name: 'Lantyca (Rainforest Moon)', color: '#15803d', size: 0.12, orbitDistance: 0.72, orbitSpeed: 0.022 },
-      { name: 'Tide-Spout A', color: '#bae6fd', size: 0.045, orbitDistance: 0.98, orbitSpeed: 0.016 },
-      { name: 'Abyssal Ward', color: '#e0f2fe', size: 0.05, orbitDistance: 1.18, orbitSpeed: 0.012 },
+      { name: 'Lantyca (Rainforest Moon)', color: '#15803d', size: 0.14, orbitDistance: 0.84, orbitSpeed: 0.022 },
+      { name: 'Tide-Spout A', color: '#bae6fd', size: 0.05, orbitDistance: 1.08, orbitSpeed: 0.016 },
+      { name: 'Abyssal Ward', color: '#e0f2fe', size: 0.055, orbitDistance: 1.28, orbitSpeed: 0.012 },
     ],
   },
   {
@@ -670,15 +679,15 @@ export const CANONICAL_SOLAR_SYSTEM: SolarBody[] = [
     name: 'Duathyer (Psyon)',
     type: 'planet',
     deityId: 'Psyon',
-    orbitRadius: 13.6,
-    orbitSpeed: 0.0015,
+    orbitRadius: 16.0,
+    orbitSpeed: 0.0013,
     color: '#4338ca',
-    size: 0.29,
-    description: 'Dark indigo/obsidian world shrouded in swirling pale purple mist and acid craters with telepathic memory crystals.',
+    size: 0.39, // Uranus/Neptune-analog acid-mist giant
+    description: 'Dark indigo/obsidian outer giant shrouded in swirling pale purple mist and acid craters with telepathic memory crystals.',
     visualStyle: 'purple_mist',
     legendKeeperResourceId: 'duathyer',
     moons: [
-      { name: 'Echo-Ghost', color: '#e2e8f0', size: 0.06, orbitDistance: 0.62, orbitSpeed: 0.019 },
+      { name: 'Echo-Ghost', color: '#e2e8f0', size: 0.06, orbitDistance: 0.68, orbitSpeed: 0.019 },
     ],
   },
   {
@@ -686,13 +695,16 @@ export const CANONICAL_SOLAR_SYSTEM: SolarBody[] = [
     name: 'Kestox / Keztox (Krayvuk)',
     type: 'planet',
     deityId: 'Krayvuk',
-    orbitRadius: 15.4,
-    orbitSpeed: 0.0012,
+    orbitRadius: 18.2,
+    orbitSpeed: 0.0010,
     color: '#16a34a',
-    size: 0.37,
-    description: 'Farthest two-lobed brain-like battle station split by glowing yellow acid equator trench: Kes (toxic bio-organic green/yellow lightning) on left, Tox (purple steel clockwork city) on right.',
+    size: 0.36, // Outer Kuiper/Pluto singularity war-station
+    description: 'Farthest two-lobed brain-like battle station split by glowing yellow acid equator trench: Kes (toxic bio-organic green/yellow lightning) on left, Tox (purple steel clockwork city) on right, orbited by Krayvuk’s Singularity Eye.',
     visualStyle: 'brain_lobes',
     legendKeeperResourceId: 'kestox',
+    moons: [
+      { name: 'Krayvuk Singularity Eye', color: '#a855f7', size: 0.14, orbitDistance: 0.92, orbitSpeed: 0.024 },
+    ],
   },
 ];
 

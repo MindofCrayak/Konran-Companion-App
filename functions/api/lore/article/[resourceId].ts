@@ -1,7 +1,6 @@
-import { CANONICAL_FALLBACK_PINS } from '../legendkeeper';
-
 interface Env {
   LEGENDKEEPER_API_KEY?: string;
+  LK_API_KEY?: string;
   LEGENDKEEPER_PROJECT_ID?: string;
   LORE_CACHE?: {
     get: (key: string) => Promise<string | null>;
@@ -27,7 +26,6 @@ function blocksToMarkdown(blocks: any[]): {
         images.push(b.url);
         lines.push(`![${b.alt || 'Lore Image'}](${b.url})`);
       } else if (text) {
-        // Extract @page mentions
         const mentionMatches = text.matchAll(/@([A-Za-z0-9_-]+(?:\s+[A-Za-z0-9_-]+)?)/g);
         for (const m of mentionMatches) {
           const id = m[1].toLowerCase().replace(/\s+/g, '-');
@@ -51,12 +49,36 @@ function blocksToMarkdown(blocks: any[]): {
   };
 }
 
+function buildCredentialsRequiredArticle(resourceId: string, reason: string): Response {
+  return new Response(
+    JSON.stringify({
+      id: resourceId,
+      resourceId,
+      status: 'CREDENTIALS_REQUIRED',
+      diagnostic: '[LK BRIDGE: CREDENTIALS REQUIRED]',
+      error: reason,
+    }),
+    {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    }
+  );
+}
+
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const { LEGENDKEEPER_API_KEY, LEGENDKEEPER_PROJECT_ID, LORE_CACHE } = context.env;
+  const apiKey = (context.env.LEGENDKEEPER_API_KEY || context.env.LK_API_KEY || '').trim();
+  const { LEGENDKEEPER_PROJECT_ID, LORE_CACHE } = context.env;
   const rawParam = context.params?.resourceId;
   const resourceId = (Array.isArray(rawParam) ? rawParam[0] : rawParam || 'konran').toString();
 
-  const cacheKey = `lk_article_v3_${resourceId}`;
+  if (!apiKey) {
+    return buildCredentialsRequiredArticle(
+      resourceId,
+      'LEGENDKEEPER_API_KEY (or LK_API_KEY) is not configured in Cloudflare Worker secrets.'
+    );
+  }
+
+  const cacheKey = `lk_live_article_v3_${resourceId}`;
   if (LORE_CACHE) {
     try {
       const cached = await LORE_CACHE.get(cacheKey);
@@ -71,50 +93,16 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
   }
 
-  const matchedPin = CANONICAL_FALLBACK_PINS.find(
-    (p) => p.resourceId === resourceId || p.id === resourceId || p.name.toLowerCase() === resourceId.toLowerCase()
-  );
-  const subPins = CANONICAL_FALLBACK_PINS.filter(
-    (p) => p.parentId === matchedPin?.id || p.parentResourceId === (matchedPin?.resourceId || resourceId)
-  );
-
-  const buildFallback = () =>
-    new Response(
-      JSON.stringify({
-        id: resourceId,
-        resourceId,
-        name: matchedPin?.name || resourceId.replace(/-/g, ' ').toUpperCase(),
-        tier: matchedPin ? `Tier ${matchedPin.tierLevel || 2} // ${matchedPin.tier.toUpperCase()}` : 'Tier 1 // Archive',
-        tierLevel: matchedPin?.tierLevel || 2,
-        hasSubMap: Boolean(matchedPin?.hasSubMap || subPins.length > 0),
-        subMapChildren: subPins.map((s) => ({
-          id: s.resourceId || s.id,
-          name: s.name,
-          tier: `Tier ${s.tierLevel || 3} // ${s.tier}`,
-        })),
-        mentions: subPins.map((s) => ({ id: s.resourceId || s.id, label: `@${s.name}` })),
-        images: [],
-        markdown: `### ${matchedPin?.name || resourceId.replace(/-/g, ' ').toUpperCase()}\n\n*Archival dossier synchronized from the Konran Planetary Lore Engine (LegendKeeper v3).*\n\n${
-          subPins.length > 0
-            ? `**Sub-Map Portals Available:** ${subPins.map((s) => `@${s.name}`).join(', ')}\n\nSelect any sub-map portal below to dive into regional cities, street districts, or building interiors.`
-            : 'Local guilds, couriers, and covenant wards maintain active telemetry across this sector via the Ley-Lattice.'
-        }`,
-        source: 'canonical_fallback',
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
-
-  if (!LEGENDKEEPER_API_KEY) {
-    return buildFallback();
-  }
-
   const headers = {
-    Authorization: `Bearer ${LEGENDKEEPER_API_KEY.trim()}`,
+    Authorization: `Bearer ${apiKey}`,
     Accept: 'application/json',
   };
 
   try {
     const projRes = await fetch('https://www.legendkeeper.com/api/v3/projects', { headers });
+    if (projRes.status === 401 || projRes.status === 403) {
+      return buildCredentialsRequiredArticle(resourceId, `LegendKeeper auth rejected (HTTP ${projRes.status}).`);
+    }
     let projectId: string | undefined;
     if (projRes.ok) {
       const projData: any = await projRes.json();
@@ -124,11 +112,21 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     if (!projectId && LEGENDKEEPER_PROJECT_ID) {
       projectId = LEGENDKEEPER_PROJECT_ID.split('/').pop();
     }
-    if (!projectId) return buildFallback();
+    if (!projectId) {
+      return buildCredentialsRequiredArticle(resourceId, 'Could not resolve LegendKeeper Project ID.');
+    }
 
     const baseUrl = `https://www.legendkeeper.com/api/v3/projects/${projectId}`;
     const resResp = await fetch(`${baseUrl}/resources/${encodeURIComponent(resourceId)}`, { headers });
-    if (!resResp.ok) return buildFallback();
+    if (resResp.status === 401 || resResp.status === 403) {
+      return buildCredentialsRequiredArticle(resourceId, `LegendKeeper auth rejected (HTTP ${resResp.status}).`);
+    }
+    if (!resResp.ok) {
+      return buildCredentialsRequiredArticle(
+        resourceId,
+        `Resource "${resourceId}" not found or inaccessible in LegendKeeper (HTTP ${resResp.status}).`
+      );
+    }
 
     const resObj: any = await resResp.json();
     const docs: any[] = resObj.documents || [];
@@ -154,21 +152,49 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       }
     }
 
+    // If this resource has a map tab, fetch its child pin links for interactive sub-map diving
+    const subMapChildren: { id: string; name: string; tier: string }[] = [];
+    if (mapDoc) {
+      try {
+        const featResp = await fetch(
+          `${baseUrl}/resources/${encodeURIComponent(resourceId)}/docs/${encodeURIComponent(mapDoc.id)}/features`,
+          { headers }
+        );
+        if (featResp.ok) {
+          const featData: any = await featResp.json();
+          const pins = (featData.data || []).filter(
+            (f: any) => f.type === 'pin' || f.geometry?.type === 'Point'
+          );
+          for (const p of pins) {
+            const uri: string = p.uri || p.properties?.uri || '';
+            const m = uri.match(/lk:\/\/resources\/([^/]+)/);
+            const childId = m ? m[1] : p.properties?.resourceId || p.id;
+            if (childId) {
+              subMapChildren.push({
+                id: childId,
+                name: p.name || p.properties?.name || childId,
+                tier: 'Nested Map Pin',
+              });
+            }
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     const payload = JSON.stringify({
       id: resObj.id || resourceId,
       resourceId: resObj.id || resourceId,
-      name: resObj.name || matchedPin?.name || resourceId,
+      name: resObj.name || resourceId,
       tier: mapDoc ? 'Interactive Sub-Map Resource' : 'Lore Dossier',
-      tierLevel: matchedPin?.tierLevel || 2,
-      hasSubMap: Boolean(mapDoc || subPins.length > 0),
-      subMapChildren: subPins.map((s) => ({
-        id: s.resourceId || s.id,
-        name: s.name,
-        tier: `Tier ${s.tierLevel || 3} // ${s.tier}`,
-      })),
+      tierLevel: 2,
+      hasSubMap: Boolean(mapDoc || subMapChildren.length > 0),
+      subMapChildren,
       mentions,
       images,
       markdown,
+      status: 'LIVE',
       source: 'legendkeeper_v3_live',
     });
 
@@ -184,7 +210,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       status: 200,
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=600' },
     });
-  } catch {
-    return buildFallback();
+  } catch (err: any) {
+    return buildCredentialsRequiredArticle(resourceId, err?.message || 'LegendKeeper v3 fetch failed.');
   }
 };

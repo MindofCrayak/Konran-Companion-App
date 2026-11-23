@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "1.0.0",
+  "cyberware": [
+    {
+      "id": "ware_neural_co_processor",
+      "name": "Neural Co-Processor Mk.II",
+      "slot": "neural",
+      "rarity": "Uncommon",
+      "timerBonusSeconds": 4,
+      "retryBonus": 1,
+      "frequencyDriftMultiplier": 0.9,
+      "passivePerceptionBonus": 1,
+      "ramBonus": 1,
+      "description": "Offloads hexadecimal matrix arithmetic to a secondary sub-cranial silicon bridge."
+    },
+    {
+      "id": "ware_ocular_glyph_scanner",
+      "name": "Ocular Glyph Scanner",
+      "slot": "ocular",
+      "rarity": "Rare",
+      "timerBonusSeconds": 2,
+      "retryBonus": 0,
+      "frequencyDriftMultiplier": 0.85,
+      "passivePerceptionBonus": 3,
+      "ramBonus": 0,
+      "description": "Highlights micro-fractures, steganographic script layers, and packet parity anomalies."
+    },
+    {
+      "id": "ware_reflex_synapse_boost",
+      "name": "Reflex Synapse Accelerator",
+      "slot": "nervous",
+      "rarity": "Rare",
+      "timerBonusSeconds": 6,
+      "retryBonus": 0,
+      "frequencyDriftMultiplier": 0.8,
+      "passivePerceptionBonus": 0,
+      "ramBonus": 0,
+      "description": "Superconducts motor-cortex pathways for high-speed conduit routing and cold-boot slashes."
+    },
+    {
+      "id": "ware_harmonic_ear_dampener",
+      "name": "Harmonic Cochlear Stabilizer",
+      "slot": "auditory",
+      "rarity": "Uncommon",
+      "timerBonusSeconds": 2,
+      "retryBonus": 1,
+      "frequencyDriftMultiplier": 0.65,
+      "passivePerceptionBonus": 2,
+      "ramBonus": 0,
+      "description": "Locks carrier waves and dampens oscillator phase drift during waveform synchronization."
+    },
+    {
+      "id": "ware_ice_breaker_coproc",
+      "name": "Black-ICE Breaker Co-Proc",
+      "slot": "neural",
+      "rarity": "Very Rare",
+      "timerBonusSeconds": 3,
+      "retryBonus": 2,
+      "frequencyDriftMultiplier": 0.9,
+      "passivePerceptionBonus": 1,
+      "ramBonus": 2,
+      "description": "Expands volatile daemon buffer capacity and absorbs counter-intrusion feedback spikes."
+    },
+    {
+      "id": "ware_biometric_spoof_skin",
+      "name": "Chameleon Biometric Sub-Derm",
+      "slot": "dermal",
+      "rarity": "Uncommon",
+      "timerBonusSeconds": 3,
+      "retryBonus": 1,
+      "frequencyDriftMultiplier": 0.95,
+      "passivePerceptionBonus": 1,
+      "ramBonus": 0,
+      "description": "Emits synthetic handshake signatures that delay diagnostic trace locks on public terminals."
+    }
+  ]
+}

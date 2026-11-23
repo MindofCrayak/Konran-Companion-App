@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "1.0.0",
+  "launchModules": [
+    {
+      "id": "cold_boot",
+      "index": 0,
+      "name": "Module 0: Cold-Boot Sequence",
+      "inspiration": "Tactile Slash + Toggle Array + Simon Memory Signature",
+      "baseTimerSeconds": 20,
+      "baseGridSize": 4,
+      "baseRetries": 2,
+      "supportsFamiliarityBypass": true,
+      "description": "Sever security buses, latch power relays, and input the 4-node boot signature."
+    },
+    {
+      "id": "matrix_daemon",
+      "index": 1,
+      "name": "Module 1: Matrix Daemon Upload",
+      "inspiration": "Cyberpunk 2077 Breach Protocol",
+      "baseTimerSeconds": 35,
+      "baseGridSize": 5,
+      "baseRetries": 1,
+      "supportsFamiliarityBypass": false,
+      "description": "Chain alternating row and column hex tokens into your RAM buffer to match target daemon sequences."
+    },
+    {
+      "id": "trace_capture",
+      "index": 2,
+      "name": "Module 2: Trace & Node Capture",
+      "inspiration": "Deus Ex: Human Revolution Network Intrusion",
+      "baseTimerSeconds": 30,
+      "baseGridSize": 6,
+      "baseRetries": 1,
+      "supportsFamiliarityBypass": false,
+      "description": "Capture the datastore node before the diagnostic trace completes using Stealth Probes or Brute-Force Nukes."
+    },
+    {
+      "id": "packet_deduction",
+      "index": 3,
+      "name": "Module 3: Packet Deduction",
+      "inspiration": "Fallout Terminal / Star Wars Outlaws Slicing",
+      "baseTimerSeconds": 45,
+      "baseGridSize": 8,
+      "baseRetries": 3,
+      "supportsFamiliarityBypass": false,
+      "description": "Deduce the target cipher packet from positional glyph resonance feedback while pruning duds."
+    },
+    {
+      "id": "conduit_routing",
+      "index": 4,
+      "name": "Module 4: Conduit Routing",
+      "inspiration": "Watch Dogs / BioShock Pipe Flow",
+      "baseTimerSeconds": 28,
+      "baseGridSize": 4,
+      "baseRetries": 2,
+      "supportsFamiliarityBypass": false,
+      "description": "Rotate high-voltage optical conduits to bridge the source emitter to the terminal receiver."
+    },
+    {
+      "id": "waveform_lock",
+      "index": 5,
+      "name": "Module 5: Waveform Lock",
+      "inspiration": "Alien: Isolation Signal Tuner",
+      "baseTimerSeconds": 25,
+      "baseGridSize": 1,
+      "baseRetries": 2,
+      "supportsFamiliarityBypass": false,
+      "description": "Match carrier frequency and amplitude against a drifting target oscillator and hold phase lock."
+    }
+  ],
+  "futureModules": [
+    { "id": "keystroke_injection", "index": 6, "phase": 2, "name": "6. Keystroke Injection", "status": "Phase 2 Prototype" },
+    { "id": "kinetic_pin_timing", "index": 7, "phase": 2, "name": "7. Kinetic Pin Timing", "status": "Phase 2 Prototype" },
+    { "id": "noise_slice_assembly", "index": 8, "phase": 2, "name": "8. Noise/Slice Assembly", "status": "Phase 2 Prototype" },
+    { "id": "voltage_balancing", "index": 9, "phase": 2, "name": "9. Voltage Balancing", "status": "Phase 2 Prototype" },
+    { "id": "gyro_maze", "index": 10, "phase": 3, "name": "10. Gyro Maze", "status": "Phase 3 Telemetry" },
+    { "id": "vector_ice_shooter", "index": 11, "phase": 3, "name": "11. Vector ICE Shooter", "status": "Phase 3 Telemetry" },
+    { "id": "cli_decking", "index": 12, "phase": 3, "name": "12. Command-Line Decking", "status": "Phase 3 Telemetry" },
+    { "id": "mainframe_raid", "index": 13, "phase": 3, "name": "13. Mainframe Raid", "status": "Phase 3 Multi-Deck" },
+    { "id": "ring_decoders", "index": 14, "phase": 3, "name": "14. Ring Decoders", "status": "Phase 3 Cryptex" }
+  ]
+}

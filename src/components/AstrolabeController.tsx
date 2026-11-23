@@ -225,11 +225,14 @@ export const AstrolabeController: React.FC<AstrolabeControllerProps> = ({
         className={`astrolabe-docked-spyglass ${
           isLeft ? 'astrolabe-docked-spyglass--left' : 'astrolabe-docked-spyglass--right'
         } ${isZoomLocked ? 'astrolabe-docked-spyglass--locked' : ''}`}
-        title="Spyglass Z-Depth (Tap: Cycle Surface/Planet/System · Hold/Right-Click: Zoom Lock)"
+        title="Spyglass Celestial Mode (Tap: Cycle SURFACE / ORBIT / SOLAR · Hold/Right-Click: Zoom Lock)"
       >
         <Eye className={`w-3.5 h-3.5 ${isZoomLocked ? 'animate-pulse text-[#facc15]' : 'text-[#38bdf8]'}`} />
         <span>
-          {isZoomLocked ? `ZOOM LOCK [${zTier.toUpperCase()}]` : `🔭 ${zTier.toUpperCase()}`}
+          {(() => {
+            const modeLabel = zTier === 'system' ? 'SOLAR' : zTier === 'planet' ? 'ORBIT' : 'SURFACE';
+            return isZoomLocked ? `ZOOM LOCK [${modeLabel}]` : `🔭 ${modeLabel}`;
+          })()}
         </span>
       </button>
 

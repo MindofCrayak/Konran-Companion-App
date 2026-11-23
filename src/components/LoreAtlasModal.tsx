@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Search, BookOpen, ExternalLink, X, Loader2, Compass, Layers, AtSign } from 'lucide-react';
 import {
-  CANONICAL_GLOBE_PINS,
-  resolveCanonicalLoreArticle,
-  LoreArticleDossier,
-} from '../utils/legendKeeperData';
+  Search,
+  BookOpen,
+  ExternalLink,
+  X,
+  Loader2,
+  Compass,
+  Layers,
+  AtSign,
+  AlertTriangle,
+  ShieldCheck,
+} from 'lucide-react';
 import { playKeyClick, playOptionSelect } from '../utils/audio';
 
 interface LoreAtlasModalProps {
@@ -12,6 +18,18 @@ interface LoreAtlasModalProps {
   onClose: () => void;
   initialQuery?: string;
   isEmbedded?: boolean;
+}
+
+interface LiveLoreArticle {
+  id: string;
+  resourceId: string;
+  name: string;
+  tier: string;
+  tierLevel: number;
+  markdown: string;
+  mentions: { id: string; label: string }[];
+  hasSubMap: boolean;
+  subMapChildren: { id: string; name: string; tier: string }[];
 }
 
 export const LoreAtlasModal: React.FC<LoreAtlasModalProps> = ({
@@ -23,8 +41,10 @@ export const LoreAtlasModal: React.FC<LoreAtlasModalProps> = ({
   const [query, setQuery] = useState(initialQuery);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any[]>([]);
-  const [selectedDoc, setSelectedDoc] = useState<LoreArticleDossier | null>(null);
+  const [selectedDoc, setSelectedDoc] = useState<LiveLoreArticle | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<{ id: string; name: string }[]>([]);
+  const [bridgeStatus, setBridgeStatus] = useState<'LIVE' | 'CREDENTIALS_REQUIRED' | 'IDLE'>('IDLE');
+  const [diagnosticReason, setDiagnosticReason] = useState<string>('');
 
   useEffect(() => {
     if (isOpen) {
@@ -32,76 +52,57 @@ export const LoreAtlasModal: React.FC<LoreAtlasModalProps> = ({
         setQuery(initialQuery);
         handleOpenArticle(initialQuery, true);
       } else {
-        // Default populate with Tier 1..4 canonical pins
-        setResults(
-          CANONICAL_GLOBE_PINS.map((m) => ({
-            resource: {
-              id: m.resourceId || m.id,
-              name: m.name,
-              tags: [m.tier, `Tier ${m.tierLevel || 2}`],
-              hasSubMap: m.hasSubMap,
-            },
-            document: {
-              id: `doc-${m.resourceId || m.id}`,
-              name: m.name,
-              highlights: [
-                {
-                  segment: `${m.name} (${m.tier.toUpperCase()}) — Lat ${m.lat.toFixed(1)}°, Lng ${m.lng.toFixed(1)}°`,
-                },
-              ],
-            },
-          }))
-        );
+        handleSearch('');
       }
     }
   }, [isOpen, initialQuery]);
 
   const handleOpenArticle = async (idOrQuery: string, resetCrumbs = false) => {
+    const slug = idOrQuery.trim();
+    if (!slug) return;
     setLoading(true);
-    const localDossier = resolveCanonicalLoreArticle(idOrQuery);
     try {
-      const slug = localDossier.resourceId || idOrQuery.toLowerCase().trim().replace(/\s+/g, '-');
       const res = await fetch(`/api/lore/article/${encodeURIComponent(slug)}`);
-      if (res.ok) {
-        const body = await res.json();
-        const merged: LoreArticleDossier = {
-          id: body.id || localDossier.id,
-          resourceId: body.resourceId || localDossier.resourceId,
-          name: body.name || localDossier.name,
-          tier: body.tier || localDossier.tier,
-          tierLevel: body.tierLevel || localDossier.tierLevel,
-          summary: localDossier.summary,
-          markdown: body.markdown || body.text || localDossier.markdown,
-          mentions:
-            Array.isArray(body.mentions) && body.mentions.length > 0
-              ? body.mentions
-              : localDossier.mentions,
-          hasSubMap: body.hasSubMap ?? localDossier.hasSubMap,
-          subMapChildren:
-            Array.isArray(body.subMapChildren) && body.subMapChildren.length > 0
-              ? body.subMapChildren
-              : localDossier.subMapChildren,
-        };
-        setSelectedDoc(merged);
-        setBreadcrumbs((prev) =>
-          resetCrumbs
-            ? [{ id: merged.resourceId, name: merged.name }]
-            : [...prev.filter((b) => b.id !== merged.resourceId), { id: merged.resourceId, name: merged.name }]
-        );
+      if (!res.ok) {
+        setSelectedDoc(null);
+        setBridgeStatus('CREDENTIALS_REQUIRED');
+        setDiagnosticReason(`Cloudflare Worker /api/lore/article/${slug} returned HTTP ${res.status}.`);
         return;
       }
-    } catch {
-      // Fallback to local canonical dossier
+      const body: any = await res.json();
+      if (body.status === 'CREDENTIALS_REQUIRED' || body.diagnostic === '[LK BRIDGE: CREDENTIALS REQUIRED]') {
+        setSelectedDoc(null);
+        setBridgeStatus('CREDENTIALS_REQUIRED');
+        setDiagnosticReason(body.error || 'LEGENDKEEPER_API_KEY / LK_API_KEY or root map ID is missing.');
+        return;
+      }
+
+      const article: LiveLoreArticle = {
+        id: body.id || slug,
+        resourceId: body.resourceId || slug,
+        name: body.name || body.title || slug,
+        tier: body.tier || 'LegendKeeper v3 Resource',
+        tierLevel: body.tierLevel || 2,
+        markdown: body.markdown || body.text || 'No textual blocks returned from LegendKeeper.',
+        mentions: Array.isArray(body.mentions) ? body.mentions : [],
+        hasSubMap: Boolean(body.hasSubMap),
+        subMapChildren: Array.isArray(body.subMapChildren) ? body.subMapChildren : [],
+      };
+      setBridgeStatus('LIVE');
+      setDiagnosticReason('');
+      setSelectedDoc(article);
+      setBreadcrumbs((prev) =>
+        resetCrumbs
+          ? [{ id: article.resourceId, name: article.name }]
+          : [...prev.filter((b) => b.id !== article.resourceId), { id: article.resourceId, name: article.name }]
+      );
+    } catch (err: any) {
+      setSelectedDoc(null);
+      setBridgeStatus('CREDENTIALS_REQUIRED');
+      setDiagnosticReason(err?.message || 'LegendKeeper v3 bridge endpoint unreachable.');
     } finally {
       setLoading(false);
     }
-
-    setSelectedDoc(localDossier);
-    setBreadcrumbs((prev) =>
-      resetCrumbs
-        ? [{ id: localDossier.resourceId, name: localDossier.name }]
-        : [...prev.filter((b) => b.id !== localDossier.resourceId), { id: localDossier.resourceId, name: localDossier.name }]
-    );
   };
 
   const handleSearch = async (searchTerm: string) => {
@@ -109,45 +110,55 @@ export const LoreAtlasModal: React.FC<LoreAtlasModalProps> = ({
     setSelectedDoc(null);
     const qStr = searchTerm.trim();
     try {
-      const res = await fetch(`/api/lore/legendkeeper?q=${encodeURIComponent(qStr)}`);
-      if (res.ok) {
-        const body = await res.json();
-        if (Array.isArray(body.data) && body.data.length > 0) {
-          setResults(body.data);
-          setLoading(false);
-          return;
-        }
+      const endpoint = qStr
+        ? `/api/lore/legendkeeper?q=${encodeURIComponent(qStr)}`
+        : `/api/lore/legendkeeper?pins=1`;
+      const res = await fetch(endpoint);
+      if (!res.ok) {
+        setResults([]);
+        setBridgeStatus('CREDENTIALS_REQUIRED');
+        setDiagnosticReason(`Cloudflare Worker /api/lore/legendkeeper returned HTTP ${res.status}.`);
+        return;
       }
-    } catch {
-      // Fallback to canonical search
-    }
+      const body: any = await res.json();
+      if (body.status === 'CREDENTIALS_REQUIRED' || body.diagnostic === '[LK BRIDGE: CREDENTIALS REQUIRED]') {
+        setResults([]);
+        setBridgeStatus('CREDENTIALS_REQUIRED');
+        setDiagnosticReason(
+          body.error || 'Missing LEGENDKEEPER_API_KEY / LK_API_KEY or root map ID in Cloudflare Worker secrets.'
+        );
+        return;
+      }
 
-    const lower = qStr.toLowerCase();
-    const matches = lower
-      ? CANONICAL_GLOBE_PINS.filter(
-          (p) => p.name.toLowerCase().includes(lower) || p.resourceId?.toLowerCase().includes(lower)
-        )
-      : CANONICAL_GLOBE_PINS;
-    setResults(
-      (matches.length > 0 ? matches : CANONICAL_GLOBE_PINS).map((m) => ({
-        resource: {
-          id: m.resourceId || m.id,
-          name: m.name,
-          tags: [m.tier, `Tier ${m.tierLevel || 2}`],
-          hasSubMap: m.hasSubMap,
-        },
-        document: {
-          id: `doc-${m.resourceId || m.id}`,
-          name: m.name,
-          highlights: [
-            {
-              segment: `${m.name} (${m.tier.toUpperCase()}) — Lat ${m.lat.toFixed(1)}°, Lng ${m.lng.toFixed(1)}°`,
-            },
-          ],
-        },
-      }))
-    );
-    setLoading(false);
+      setBridgeStatus('LIVE');
+      setDiagnosticReason('');
+      const rawList = Array.isArray(body.data) ? body.data : [];
+      // Normalize either search hits ({ resource, document }) or pin records ({ id, name, resourceId })
+      const normalized = rawList.map((item: any) => {
+        if (item.resource) return item;
+        return {
+          resource: {
+            id: item.resourceId || item.id,
+            name: item.name,
+            hasSubMap: item.hasSubMap,
+          },
+          document: {
+            id: `doc-${item.resourceId || item.id}`,
+            name: item.name,
+            highlights: item.lat !== undefined
+              ? [{ segment: `${item.name} (${(item.tier || 'pin').toUpperCase()}) — Lat ${Number(item.lat).toFixed(1)}°, Lng ${Number(item.lng).toFixed(1)}°` }]
+              : [],
+          },
+        };
+      });
+      setResults(normalized);
+    } catch (err: any) {
+      setResults([]);
+      setBridgeStatus('CREDENTIALS_REQUIRED');
+      setDiagnosticReason(err?.message || 'Unable to reach /api/lore/legendkeeper.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -160,16 +171,36 @@ export const LoreAtlasModal: React.FC<LoreAtlasModalProps> = ({
           : 'max-w-2xl border-2 border-[#7d561a] rounded-2xl shadow-2xl max-h-[85vh]'
       } bg-[#0c0804] p-4 sm:p-5 text-[#d4af37] flex flex-col font-serif overflow-hidden`}
     >
-      {/* Header */}
-      <div className="flex justify-between items-center border-b border-[#5e3b1c]/70 pb-2.5 mb-3">
+      {/* Header + Live Diagnostic Bridge Status Badge */}
+      <div className="flex flex-wrap justify-between items-center gap-2 border-b border-[#5e3b1c]/70 pb-2.5 mb-3">
         <div className="flex items-center gap-2">
           <BookOpen className="w-5 h-5 text-[#ffd700]" />
           <div>
-            <h2 className="text-sm sm:text-base font-bold text-[#ffd700] tracking-wide">
-              Grand Codex &amp; Recursive Map Atlas (LegendKeeper v3)
-            </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-sm sm:text-base font-bold text-[#ffd700] tracking-wide">
+                Grand Codex &amp; Live Map Atlas (LegendKeeper v3)
+              </h2>
+              {bridgeStatus === 'CREDENTIALS_REQUIRED' && (
+                <span
+                  className="px-2 py-0.5 rounded bg-red-950/90 border border-red-400 text-red-200 font-mono text-[10px] font-bold tracking-wider flex items-center gap-1"
+                  data-testid="lk-bridge-status"
+                >
+                  <AlertTriangle className="w-3 h-3 text-red-400" />
+                  [LK BRIDGE: CREDENTIALS REQUIRED]
+                </span>
+              )}
+              {bridgeStatus === 'LIVE' && (
+                <span
+                  className="px-2 py-0.5 rounded bg-emerald-950/90 border border-[#39ff14]/60 text-[#39ff14] font-mono text-[10px] font-bold tracking-wider flex items-center gap-1"
+                  data-testid="lk-bridge-status"
+                >
+                  <ShieldCheck className="w-3 h-3 text-[#39ff14]" />
+                  [LK BRIDGE: LIVE]
+                </span>
+              )}
+            </div>
             <p className="text-[10px] font-mono text-[#a78b54]">
-              Tier 0 Solar System → Tier 1 Globe → Tier 2 Continent → Tier 3 City → Tier 4+ Street View
+              Direct Live Proxy → /api/lore/legendkeeper &amp; /api/lore/article/:resourceId (Zero Mock Data)
             </p>
           </div>
         </div>
@@ -183,7 +214,7 @@ export const LoreAtlasModal: React.FC<LoreAtlasModalProps> = ({
         )}
       </div>
 
-      {/* Search Bar & Quick Tier Portals */}
+      {/* Search Bar */}
       <div className="flex flex-wrap gap-2 mb-3">
         <div className="relative flex-1 min-w-[180px]">
           <input
@@ -191,7 +222,7 @@ export const LoreAtlasModal: React.FC<LoreAtlasModalProps> = ({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch(query)}
-            placeholder="Search Kray Providence, Crafton Cove, The Mydnight Rendezvous..."
+            placeholder="Query live LegendKeeper v3 world archives..."
             className="w-full bg-[#180f08] border border-[#5e3b1c] rounded px-3 py-1.5 pl-8 text-xs text-[#ffd700] placeholder-[#8c7456] focus:outline-none focus:border-[#ffd700] font-sans"
           />
           <Search className="w-4 h-4 text-[#8c7456] absolute left-2.5 top-2" />
@@ -207,6 +238,23 @@ export const LoreAtlasModal: React.FC<LoreAtlasModalProps> = ({
           {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Search'}
         </button>
       </div>
+
+      {/* Diagnostic Alert Panel when LK_API_KEY / LEGENDKEEPER_API_KEY is missing or unauthorized */}
+      {bridgeStatus === 'CREDENTIALS_REQUIRED' && (
+        <div className="mb-3 p-3.5 rounded-lg bg-red-950/60 border border-red-500/60 font-mono text-xs text-red-200 space-y-1.5">
+          <div className="flex items-center gap-2 font-bold text-red-300">
+            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+            <span>[LK BRIDGE: CREDENTIALS REQUIRED]</span>
+          </div>
+          <p className="text-[11px] text-red-200/90 leading-relaxed">
+            {diagnosticReason ||
+              'Live LegendKeeper v3 credentials (LEGENDKEEPER_API_KEY / LK_API_KEY) or root map ID were not returned by the Cloudflare Worker.'}
+          </p>
+          <p className="text-[10px] text-amber-300/80">
+            Mock/placeholder pins have been purged. Configure <code className="text-white">LEGENDKEEPER_API_KEY</code> and <code className="text-white">LEGENDKEEPER_PROJECT_ID</code> in Cloudflare Pages secrets (or local <code className="text-white">.dev.vars</code>) to stream live maps and articles.
+          </p>
+        </div>
+      )}
 
       {/* Breadcrumb Trail */}
       {breadcrumbs.length > 0 && selectedDoc && (
@@ -265,7 +313,7 @@ export const LoreAtlasModal: React.FC<LoreAtlasModalProps> = ({
                 }}
                 className="text-[10px] font-mono text-[#a78b54] hover:text-[#ffd700] underline cursor-pointer"
               >
-                ← All Pins &amp; Locales
+                ← Back to Search Results
               </button>
             </div>
 
@@ -273,7 +321,6 @@ export const LoreAtlasModal: React.FC<LoreAtlasModalProps> = ({
               {selectedDoc.markdown}
             </div>
 
-            {/* Sub-Map Portal Diving Reticles (Tier N -> Tier N+1) */}
             {selectedDoc.subMapChildren.length > 0 && (
               <div className="pt-2 border-t border-[#5e3b1c]/40">
                 <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-emerald-400 mb-2">
@@ -303,7 +350,6 @@ export const LoreAtlasModal: React.FC<LoreAtlasModalProps> = ({
               </div>
             )}
 
-            {/* @page Mentions */}
             {selectedDoc.mentions.length > 0 && (
               <div className="pt-2 border-t border-[#5e3b1c]/40">
                 <div className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-[#a78b54] mb-1.5">
@@ -358,10 +404,12 @@ export const LoreAtlasModal: React.FC<LoreAtlasModalProps> = ({
             </div>
           ))
         ) : (
-          <div className="text-center py-8 text-stone-500 font-sans italic text-xs">
+          <div className="text-center py-8 text-stone-500 font-mono text-xs">
             {loading
-              ? 'Consulting the grand library in LegendKeeper...'
-              : 'Enter a query to search the live LegendKeeper world archives.'}
+              ? 'Querying live LegendKeeper v3 edge bridge...'
+              : bridgeStatus === 'CREDENTIALS_REQUIRED'
+              ? '[LK BRIDGE: CREDENTIALS REQUIRED] — Connect LegendKeeper API credentials to populate live pins and articles.'
+              : 'Enter a query above to search live LegendKeeper v3 documents.'}
           </div>
         )}
       </div>

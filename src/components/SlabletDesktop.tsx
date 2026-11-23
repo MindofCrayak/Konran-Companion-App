@@ -34,8 +34,13 @@ import { useGMFeed } from '../hooks/useGMFeed';
 import { AetherWaveRadio } from './AetherWaveRadio';
 import { GMSwitchboardView } from './GMSwitchboardView';
 import { CoreNetBreachMinigameView } from './CoreNetBreachMinigameView';
+import { CoreNetDeckHub } from './deck/CoreNetDeckHub';
+import { LinguisticCipherDecoder } from './diegetic/LinguisticCipherDecoder';
+import { BardPerformanceStage } from './diegetic/BardPerformanceStage';
+import { LocationVendorDrawer } from './vendor/LocationVendorDrawer';
 import { NyneNetBoardEscrowView } from './NyneNetBoardEscrowView';
 import { KonranGlobe } from './KonranGlobe';
+import { CANONICAL_SOLAR_SYSTEM } from '../utils/celestial';
 import { KonranMandalaOverlay } from './KonranMandalaOverlay';
 import { GrandChronometronModal } from './GrandChronometronModal';
 import { CodexModal } from './CodexModal';
@@ -206,6 +211,13 @@ export const SlabletDesktop = ({
 
   // 3-Tier Z-Depth Spatial Canvas State ('surface' | 'planet' | 'system')
   const [zTier, setZTier] = useState<ZDepthTier>('planet');
+  const [selectedBody, setSelectedBody] = useState<SolarBody>(
+    () => CANONICAL_SOLAR_SYSTEM.find((b) => b.id === 'plane-konran') || CANONICAL_SOLAR_SYSTEM[4]
+  );
+
+  const selectedBodyShortName = useMemo(() => {
+    return selectedBody.name.split(' (')[0].toUpperCase();
+  }, [selectedBody]);
 
   // Wayfinder History (Last visited nodes across any layer)
   const [wayfinderHistory, setWayfinderHistory] = useState<WayfinderItem[]>(() => {
@@ -244,12 +256,13 @@ export const SlabletDesktop = ({
     setZTier((prev) => {
       const next: ZDepthTier = prev === 'surface' ? 'planet' : prev === 'planet' ? 'system' : 'surface';
       const stepIdx = next === 'surface' ? 0 : next === 'planet' ? 1 : 2;
+      const modeName = next === 'system' ? 'SOLAR' : next === 'planet' ? 'ORBIT' : 'SURFACE';
       playDetentTick(stepIdx);
       triggerHaptic([14, 18]);
-      showSystemNotice(`SPYGLASS CALIBRATION // ${next.toUpperCase()} VIEW (TIER ${stepIdx + 1})`);
+      showSystemNotice(`CELESTIAL NAV // ${modeName} VIEW (${selectedBodyShortName})`);
       return next;
     });
-  }, [showSystemNotice]);
+  }, [showSystemNotice, selectedBodyShortName]);
 
   // Floating Windows State
   const [windows, setWindows] = useState<CanvasWindowState[]>(() => {
@@ -520,15 +533,26 @@ export const SlabletDesktop = ({
     showSystemNotice(`LORE ARCHIVE // ACCESSED ${pin.name.toUpperCase()}`);
   }, [launchWindow, showSystemNotice]);
 
-  // Raycast Click on 3D Solar System Plane or Moon: Open Lore Window
+  // Raycast Click on 3D Solar System Plane or Moon:
+  // In SOLAR ('system') view -> smoothly lerp camera target to that body, switch to ORBIT ('planet') mode, and update live orbit status pill!
+  // In ORBIT ('planet') view -> open LegendKeeper Lore Atlas for that body.
   const handleCelestialBodyClick = useCallback((body: SolarBody) => {
     playOptionSelect();
     triggerHaptic(18);
+    const shortName = body.name.split(' (')[0].toUpperCase();
+    setSelectedBody(body);
+
+    if (zTier === 'system') {
+      setZTier('planet');
+      showSystemNotice(`${shortName} // LIVE ORBIT ENGAGED`);
+      return;
+    }
+
     setActiveLoreQuery(body.legendKeeperResourceId || body.name);
     const windowTitle = `${body.name} // CELESTIAL PLANE`;
     launchWindow('lore-atlas', windowTitle, body.color);
     showSystemNotice(`CELESTIAL RADAR // LOCK-ON ${body.name.toUpperCase()}`);
-  }, [launchWindow, showSystemNotice]);
+  }, [zTier, launchWindow, showSystemNotice]);
 
   // Reset to default configuration
   const resetWindows = () => {
@@ -927,16 +951,70 @@ export const SlabletDesktop = ({
         {/* Central Planet Konran Holographic Core */}
         <div className="slablet-globe-frame z-0">
           <div 
-            className="slablet-globe-label"
-            title="Planet Konran Live Celestial Orbit"
+            className="slablet-globe-label flex items-center gap-2"
+            title={`${selectedBody.name} Live Celestial Orbit`}
           >
             <span className="slablet-status-light" />
-            KONRAN // LIVE ORBIT
+            <span>{selectedBodyShortName} // LIVE ORBIT</span>
+            {selectedBody.id !== 'plane-konran' && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const konran = CANONICAL_SOLAR_SYSTEM.find((b) => b.id === 'plane-konran');
+                  if (konran) {
+                    setSelectedBody(konran);
+                    setZTier('planet');
+                    showSystemNotice('KONRAN // LIVE ORBIT RESTORED');
+                  }
+                }}
+                className="ml-1 rounded border border-emerald-400/50 bg-emerald-950/70 px-1.5 py-0.5 text-[8.5px] font-mono text-emerald-300 hover:bg-emerald-900/90 cursor-pointer"
+              >
+                [RETURN KONRAN]
+              </button>
+            )}
+          </div>
+
+          {/* 3-State Celestial Navigation Selector: SOLAR | ORBIT | SURFACE */}
+          <div
+            className="absolute top-10 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 rounded-full border border-white/15 bg-black/75 px-1.5 py-0.5 backdrop-blur-md shadow-[0_0_15px_rgba(0,0,0,0.75)]"
+            role="group"
+            aria-label="3-State Celestial Navigation Mode"
+          >
+            {(
+              [
+                { tier: 'system' as ZDepthTier, label: 'SOLAR' },
+                { tier: 'planet' as ZDepthTier, label: 'ORBIT' },
+                { tier: 'surface' as ZDepthTier, label: 'SURFACE' },
+              ] as const
+            ).map((mode) => {
+              const isActive = zTier === mode.tier;
+              return (
+                <button
+                  key={mode.tier}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    playOptionSelect();
+                    setZTier(mode.tier);
+                    showSystemNotice(`CELESTIAL NAV // ${mode.label} VIEW (${selectedBodyShortName})`);
+                  }}
+                  className={`px-2.5 py-0.5 rounded-full text-[9.5px] font-mono tracking-wider uppercase transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-[#38bdf8]/25 border border-[#38bdf8] text-[#38bdf8] font-bold shadow-[0_0_8px_rgba(56,189,248,0.45)]'
+                      : 'text-white/60 hover:text-white hover:bg-white/10 border border-transparent'
+                  }`}
+                >
+                  {mode.label}
+                </button>
+              );
+            })}
           </div>
 
           <KonranGlobe 
             zTier={zTier}
             screensaver={isScreensaver}
+            focusedBodyId={selectedBody.id}
             onEyeEclipseChange={(eclipsed) => {
               setIsEyeEclipsed(eclipsed);
               if (eclipsed) {
@@ -1265,7 +1343,26 @@ export const SlabletDesktop = ({
                   onClose={() => closeWindow(win.id)}
                 />
               ) : win.customData?.terminalName === 'CoreNet Matrix // Hacking & ICE Breach' ? (
-                <CoreNetBreachMinigameView />
+                <div className="w-full h-full overflow-y-auto">
+                  <CoreNetDeckHub character={activeCharacter} />
+                </div>
+              ) : win.customData?.terminalName === 'Linguistic Cipher Decoder // Lexicon' ? (
+                <div className="w-full h-full overflow-y-auto p-2">
+                  <LinguisticCipherDecoder character={activeCharacter} />
+                </div>
+              ) : win.customData?.terminalName === 'Aether-Stage // Transient Bardic Synthesizer' ? (
+                <div className="w-full h-full overflow-y-auto p-2">
+                  <BardPerformanceStage />
+                </div>
+              ) : win.customData?.terminalName === 'Provincial Quartermaster & Cyberware Clinic' ? (
+                <div className="w-full h-full overflow-y-auto p-2">
+                  <LocationVendorDrawer
+                    character={activeCharacter}
+                    onOpenPublicDataterm={() =>
+                      launchWindow('custom', 'CoreNet Matrix // Hacking & ICE Breach', '#fbbf24')
+                    }
+                  />
+                </div>
               ) : win.customData?.terminalName === 'The Nyne Net // World Wire & Lyricia Escrow' ? (
                 <NyneNetBoardEscrowView />
               ) : win.customData?.terminalName === 'Discord GM Switchboard & Prestige Control' ? (
@@ -1472,6 +1569,50 @@ export const SlabletDesktop = ({
                   <span>Discord Identity &amp; Roster Sync</span>
                 </div>
                 <span className="text-[9px] text-[#5865F2]">+SSO</span>
+              </button>
+
+              <button
+                onClick={() => launchWindow('custom', 'CoreNet Matrix // Hacking & ICE Breach', '#fbbf24')}
+                className="w-full text-left p-2 rounded bg-white/5 hover:bg-[#fbbf24]/15 border border-transparent hover:border-[#fbbf24] flex items-center justify-between cursor-pointer transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <TerminalSquare className="w-3.5 h-3.5 text-[#fbbf24]" />
+                  <span>CoreNet Deck (Modules 0–5)</span>
+                </div>
+                <span className="text-[9px] text-[#fbbf24]">+DECK</span>
+              </button>
+
+              <button
+                onClick={() => launchWindow('custom', 'Provincial Quartermaster & Cyberware Clinic', '#fbbf24')}
+                className="w-full text-left p-2 rounded bg-white/5 hover:bg-[#fbbf24]/15 border border-transparent hover:border-[#fbbf24] flex items-center justify-between cursor-pointer transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Coins className="w-3.5 h-3.5 text-[#fbbf24]" />
+                  <span>Provincial Vendor &amp; Cyber-Clinic</span>
+                </div>
+                <span className="text-[9px] text-[#fbbf24]">+VENDOR</span>
+              </button>
+
+              <button
+                onClick={() => launchWindow('custom', 'Linguistic Cipher Decoder // Lexicon', '#22d3ee')}
+                className="w-full text-left p-2 rounded bg-white/5 hover:bg-[#22d3ee]/15 border border-transparent hover:border-[#22d3ee] flex items-center justify-between cursor-pointer transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Eye className="w-3.5 h-3.5 text-[#22d3ee]" />
+                  <span>Linguistic Cipher Decoder</span>
+                </div>
+                <span className="text-[9px] text-[#22d3ee]">+LEX</span>
+              </button>
+
+              <button
+                onClick={() => launchWindow('custom', 'Aether-Stage // Transient Bardic Synthesizer', '#ec4899')}
+                className="w-full text-left p-2 rounded bg-white/5 hover:bg-[#ec4899]/15 border border-transparent hover:border-[#ec4899] flex items-center justify-between cursor-pointer transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-[#ec4899]" />
+                  <span>Bardic Performance Stage</span>
+                </div>
+                <span className="text-[9px] text-[#ec4899]">+SYNTH</span>
               </button>
 
               <button

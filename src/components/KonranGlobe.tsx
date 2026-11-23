@@ -1,10 +1,20 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { ZDepthTier, GlobePin, SolarBody } from '../types/slabletOS';
 import { CANONICAL_SOLAR_SYSTEM } from '../utils/celestial';
-import { CANONICAL_GLOBE_PINS, CONTINENT_BOUNDING_BOXES } from '../utils/legendKeeperData';
+import { CONTINENT_BOUNDING_BOXES } from '../utils/legendKeeperData';
 import { getCelestialNow, getCelestialSimMs } from '../hooks/useCelestialClock';
 import { playDetentTick, triggerHaptic, playOptionSelect } from '../utils/audio';
+
+const NIGHT_CITY_EMISSIVE_COORDS: Array<{ lat: number; lng: number; isCapital: boolean }> = [
+  { lat: 47.2, lng: -72.0, isCapital: true },  // Vantya
+  { lat: 45.1, lng: -68.4, isCapital: true },  // K.A.M.P. Citadel
+  { lat: -14.5, lng: 52.3, isCapital: true },  // Padd City
+  { lat: -22.0, lng: 44.8, isCapital: true },  // Crescent Moon Harbor
+  { lat: 44.2, lng: 82.5, isCapital: true },   // Crafton Cove
+  { lat: 41.8, lng: 76.1, isCapital: true },   // Creston Cove
+  { lat: 38.6, lng: 85.0, isCapital: true },   // Skreeton Harbor
+];
 
 // Generates a 100% seamless, continuous 360-degree cloud and storm sphere
 // Preserves r < 308px core clarity with delicate translucent storm clusters
@@ -152,7 +162,7 @@ export interface KonranGlobeProps {
 const TIER_CAM_Z: Record<ZDepthTier, number> = {
   surface: 2.35,
   planet: 5.8,
-  system: 18.0,
+  system: 24.5,
 };
 
 export const KonranGlobe = ({
@@ -183,6 +193,7 @@ export const KonranGlobe = ({
   screensaverRef.current = screensaver;
   const focusedBodyIdRef = useRef<string>(focusedBodyId);
   focusedBodyIdRef.current = focusedBodyId;
+  const reticleElsRef = useRef<Record<string, HTMLButtonElement | null>>({});
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -486,22 +497,21 @@ export const KonranGlobe = ({
       });
     };
 
-    // Immediately populate with canonical pins so first frame is ready, then upgrade from API if available
-    populatePinsAndLights(CANONICAL_GLOBE_PINS);
+    // Seed night city lights for the dark hemisphere shader; NO mock pins are seeded
+    NIGHT_CITY_EMISSIVE_COORDS.forEach((c) => buildNightCityLightCluster(c.lat, c.lng, c.isCapital));
 
     let isDisposed = false;
     const loadPins = async () => {
       try {
         const res = await fetch('/api/lore/legendkeeper?pins=1');
         if (res.ok && !isDisposed) {
-          const json: unknown = await res.json();
-          const data = (json as { data?: GlobePin[] })?.data;
-          if (Array.isArray(data) && data.length > 0) {
-            populatePinsAndLights(data);
+          const json: any = await res.json();
+          if (json?.status === 'LIVE' && Array.isArray(json.data) && json.data.length > 0) {
+            populatePinsAndLights(json.data);
           }
         }
       } catch {
-        // Fallback already populated with CANONICAL_GLOBE_PINS
+        // When offline or LK_API_KEY is missing, 0 mock pins are rendered (Lore drawer shows [LK BRIDGE: CREDENTIALS REQUIRED])
       }
     };
     loadPins();
@@ -517,6 +527,7 @@ export const KonranGlobe = ({
     const rotatingParts: Array<{ obj: THREE.Object3D; speed: number; axis?: 'x' | 'y' | 'z' }> = [];
 
     // Canonical Landmark references for dynamic per-frame animation
+    let sunHolderGroup: THREE.Group | null = null;
     let kayHalfMesh: THREE.Mesh | null = null;
     let keeHalfMesh: THREE.Mesh | null = null;
     let passingGlowRing: THREE.Mesh | null = null;
@@ -524,6 +535,7 @@ export const KonranGlobe = ({
     let lantycaMoonMesh: THREE.Mesh | null = null;
     let waterspoutBridge: THREE.Mesh | null = null;
     let waterspoutMat: THREE.MeshBasicMaterial | null = null;
+    let singularityEyeOrbitPivot: THREE.Group | null = null;
     let singularityEyeGroup: THREE.Group | null = null;
     let kestoxPlanetHolder: THREE.Group | null = null;
     let konranPlanetHolder: THREE.Group | null = null;
@@ -555,6 +567,16 @@ export const KonranGlobe = ({
         // Ayan (The Sun — Ay)
         const sunHolder = new THREE.Group();
         sunHolder.userData = { solarBody: body };
+        sunHolderGroup = sunHolder;
+
+        // Generous invisible raycast hit-sphere on Ayan
+        const sunHitSphere = new THREE.Mesh(
+          new THREE.SphereGeometry(body.size * 2.1, 16, 12),
+          new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+        );
+        sunHitSphere.userData = { solarBody: body };
+        sunHolder.add(sunHitSphere);
+        solarClickableMeshes.push(sunHitSphere);
 
         // Bright white core
         const coreGeom = new THREE.SphereGeometry(body.size, 32, 24);
@@ -623,6 +645,31 @@ export const KonranGlobe = ({
       planetHolder.position.set(body.orbitRadius, 0, 0);
       planetHolder.userData = { solarBody: body };
       orbitHolder.add(planetHolder);
+
+      // Generous invisible bounding hit-sphere on every planet & major station in SOLAR view
+      const hitRadius = Math.max(0.88, body.size * 2.65);
+      const hitSphere = new THREE.Mesh(
+        new THREE.SphereGeometry(hitRadius, 14, 10),
+        new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+      );
+      hitSphere.userData = { solarBody: body };
+      planetHolder.add(hitSphere);
+      solarClickableMeshes.push(hitSphere);
+
+      // Subtle diegetic target reticle ring on planetary bodies (especially outer-orbit worlds like Kestox)
+      const reticleRing = new THREE.Mesh(
+        new THREE.RingGeometry(body.size * 1.75, body.size * 1.94, 32),
+        new THREE.MeshBasicMaterial({
+          color: body.color,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: body.orbitRadius >= 11 ? 0.65 : 0.35,
+          blending: THREE.AdditiveBlending,
+        })
+      );
+      reticleRing.rotation.x = Math.PI / 2;
+      reticleRing.userData = { solarBody: body };
+      planetHolder.add(reticleRing);
 
       if (body.id === 'plane-konran') {
         konranPlanetHolder = planetHolder;
@@ -939,10 +986,28 @@ export const KonranGlobe = ({
         stationGroup.add(trench);
 
         // Krayvuk's High-Definition Black-Hole Singularity Eyeball
-        // Positioned just beyond Kestox so Kestox periodically eclipses its line of sight to Konran
+        // Placed on an active orbital pivot so it revolves continuously around Kestox like the other planetary moons,
+        // while keeping its iris/pupil oriented toward Konran!
+        singularityEyeOrbitPivot = new THREE.Group();
+        detailGroup.add(singularityEyeOrbitPivot);
+
+        // Thin violet orbital track ring for the Singularity Eye moon around Kestox
+        const eyeOrbitTrack = new THREE.Mesh(
+          new THREE.RingGeometry(body.size * 2.52, body.size * 2.58, 48),
+          new THREE.MeshBasicMaterial({
+            color: '#a855f7',
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.35,
+          })
+        );
+        eyeOrbitTrack.rotation.x = Math.PI / 2;
+        detailGroup.add(eyeOrbitTrack);
+
         singularityEyeGroup = new THREE.Group();
         singularityEyeGroup.position.set(body.size * 2.55, 0.08, 0);
-        detailGroup.add(singularityEyeGroup);
+        singularityEyeOrbitPivot.add(singularityEyeGroup);
+        rotatingParts.push({ obj: singularityEyeOrbitPivot, speed: 0.024, axis: 'y' });
 
         // Event Horizon Black Hole Core
         const blackHoleCore = new THREE.Mesh(
@@ -1150,8 +1215,8 @@ export const KonranGlobe = ({
         mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
         raycaster.setFromCamera(mouse, camera);
 
-        if (camera.position.length() > 9.0) {
-          // Solar System view raycasting
+        if (solarSystemGroup.visible) {
+          // Solar System view raycasting (including ORBIT view on non-Konran celestial bodies)
           const intersects = raycaster.intersectObjects(solarClickableMeshes, true);
           if (intersects.length > 0) {
             let hit: THREE.Object3D | null = intersects[0].object;
@@ -1165,8 +1230,9 @@ export const KonranGlobe = ({
               return;
             }
           }
-        } else {
-          // Globe Pins raycasting (Planet / Surface view)
+        }
+        if (planet.visible) {
+          // Globe Pins raycasting (Planet / Surface view on Konran)
           const visiblePins = pinMeshes.filter((p) => p.mesh.visible).map((p) => p.mesh);
           const intersects = raycaster.intersectObjects(visiblePins, true);
           if (intersects.length > 0) {
@@ -1230,6 +1296,10 @@ export const KonranGlobe = ({
     const konranWorldPos = new THREE.Vector3();
     const eyeToKonranDir = new THREE.Vector3();
     const eyeToKestoxDir = new THREE.Vector3();
+    const focusedBodyWorldPos = new THREE.Vector3();
+    const currentLookAt = new THREE.Vector3(0, 0, 0);
+    const targetLookAt = new THREE.Vector3(0, 0, 0);
+    const targetCamPos = new THREE.Vector3(0, 0, TIER_CAM_Z[zTier]);
 
     let lastSimMs = getCelestialSimMs();
     let lastEclipseState: boolean | null = null;
@@ -1245,31 +1315,100 @@ export const KonranGlobe = ({
       const deltaSimSec = (simMs - lastSimMs) / 1000;
       lastSimMs = simMs;
 
-      // 2. Camera Positioning & Screensaver / Attract Mode Orbital Drift
-      const targetRadius = TIER_CAM_Z[zTierRef.current];
-      if (screensaverRef.current) {
-        screensaverAngle += 0.0035;
-        const orbitR = targetRadius * 0.94;
-        const targetX = Math.sin(screensaverAngle) * orbitR;
-        const targetZ = Math.cos(screensaverAngle) * orbitR;
-        const targetY = Math.sin(screensaverAngle * 0.5) * (orbitR * 0.24);
-        camera.position.x += (targetX - camera.position.x) * 0.04;
-        camera.position.y += (targetY - camera.position.y) * 0.04;
-        camera.position.z += (targetZ - camera.position.z) * 0.04;
-        camera.lookAt(0, 0, 0);
+      // 2. Solar System Orbital Mechanics & Performance-Optimized Focus LOD (compute positions before camera lerp)
+      const simTimeFactor = simMs * 0.00006;
+      planetOrbitMeshes.forEach((item) => {
+        item.group.rotation.y = simTimeFactor * (item.speed * 1000) + item.index * 0.7;
+
+        // Focus LOD: Full detail for focused body OR canonical landmarks; proxy mesh otherwise
+        const isFocused = item.body.id === focusedBodyIdRef.current;
+        const showFullDetail = item.isLandmark || isFocused;
+        item.detailGroup.visible = showFullDetail;
+        item.proxyMesh.visible = !showFullDetail;
+      });
+      solarSystemGroup.updateMatrixWorld(true);
+
+      // 3. 3-State Camera Positioning (SOLAR | ORBIT | SURFACE) & Smooth Planetary Target Lerp
+      const currentTier = zTierRef.current;
+      const isSystem = currentTier === 'system';
+      const activeFocusedId = focusedBodyIdRef.current || 'plane-konran';
+      const isNonKonranBodyFocused = !isSystem && activeFocusedId !== 'plane-konran';
+
+      if (isSystem) {
+        solarSystemGroup.visible = true;
+        planet.visible = false;
+        targetLookAt.set(0, 0, 0);
+        const sysR = TIER_CAM_Z.system;
+        if (screensaverRef.current) {
+          screensaverAngle += 0.0035;
+          const orbitR = sysR * 0.94;
+          targetCamPos.set(
+            Math.sin(screensaverAngle) * orbitR,
+            5.8 + Math.sin(screensaverAngle * 0.5) * 3.0,
+            Math.cos(screensaverAngle) * orbitR
+          );
+        } else {
+          targetCamPos.set(0, 7.2, sysR);
+        }
+      } else if (isNonKonranBodyFocused) {
+        solarSystemGroup.visible = true;
+        planet.visible = false;
+
+        let bodySize = 0.42;
+        if (activeFocusedId === 'sun-ayan' && sunHolderGroup) {
+          sunHolderGroup.getWorldPosition(focusedBodyWorldPos);
+          bodySize = 1.05;
+        } else {
+          const found = planetOrbitMeshes.find((p) => p.body.id === activeFocusedId);
+          if (found) {
+            found.mesh.getWorldPosition(focusedBodyWorldPos);
+            bodySize = found.body.size;
+          } else {
+            focusedBodyWorldPos.set(0, 0, 0);
+          }
+        }
+
+        targetLookAt.copy(focusedBodyWorldPos);
+        const zoomOffsetZ =
+          currentTier === 'surface'
+            ? Math.max(1.35, bodySize * 3.4)
+            : Math.max(2.6, bodySize * 6.8);
+        const zoomOffsetY =
+          currentTier === 'surface'
+            ? Math.max(0.32, bodySize * 0.85)
+            : Math.max(0.75, bodySize * 1.85);
+        targetCamPos.set(
+          focusedBodyWorldPos.x,
+          focusedBodyWorldPos.y + zoomOffsetY,
+          focusedBodyWorldPos.z + zoomOffsetZ
+        );
       } else {
-        camera.position.x += (0 - camera.position.x) * 0.08;
-        camera.position.y += (0 - camera.position.y) * 0.08;
-        camera.position.z += (targetRadius - camera.position.z) * 0.08;
-        camera.lookAt(0, 0, 0);
+        // Focused on Planet Konran in ORBIT ('planet') or SURFACE ('surface') mode
+        const camDistToOrigin = camera.position.length();
+        solarSystemGroup.visible = camDistToOrigin > 11.5;
+        planet.visible = true;
+        targetLookAt.set(0, 0, 0);
+        const targetRadius = TIER_CAM_Z[currentTier];
+        if (screensaverRef.current) {
+          screensaverAngle += 0.0035;
+          const orbitR = targetRadius * 0.94;
+          targetCamPos.set(
+            Math.sin(screensaverAngle) * orbitR,
+            Math.sin(screensaverAngle * 0.5) * (orbitR * 0.24),
+            Math.cos(screensaverAngle) * orbitR
+          );
+        } else {
+          targetCamPos.set(0, 0, targetRadius);
+        }
       }
 
-      const camDist = camera.position.length();
-      const isSystem = zTierRef.current === 'system';
-      solarSystemGroup.visible = camDist > 9.0;
-      planet.visible = camDist < 12.0;
+      camera.position.lerp(targetCamPos, 0.085);
+      currentLookAt.lerp(targetLookAt, 0.11);
+      camera.lookAt(currentLookAt);
 
-      // 3. 36-Hour Solar Diurnal Terminator & Sun Direction
+      const camDist = camera.position.distanceTo(currentLookAt);
+
+      // 4. 36-Hour Solar Diurnal Terminator & Sun Direction
       const solarRad = THREE.MathUtils.degToRad(celestialState.solarDiurnalAngle);
       keyLight.position.set(
         Math.cos(solarRad) * 5.2,
@@ -1295,22 +1434,10 @@ export const KonranGlobe = ({
       // Sync planet diurnal spin + user inspection yaw
       planet.rotation.y = solarRad * 0.25 + userYawOffset;
 
-      // 4. Translucent Weather Cloud Layer & Canonical Lunar Cycles (Lyra 28d, Eyenath 60d retrograde)
+      // 5. Translucent Weather Cloud Layer & Canonical Lunar Cycles (Lyra 28d, Eyenath 60d retrograde)
       clouds.rotation.y = (simMs * 0.00004) % (Math.PI * 2);
       olysphereOrbit.rotation.y = THREE.MathUtils.degToRad(celestialState.lyra.orbitalAngle);
       ayanathOrbit.rotation.y = THREE.MathUtils.degToRad(celestialState.eyenath.orbitalAngle);
-
-      // 5. Solar System Orbital Mechanics & Performance-Optimized Focus LOD
-      const simTimeFactor = simMs * 0.00006;
-      planetOrbitMeshes.forEach((item) => {
-        item.group.rotation.y = simTimeFactor * (item.speed * 1000) + item.index * 0.7;
-
-        // Focus LOD: Full detail for focused body OR canonical landmarks; proxy mesh otherwise
-        const isFocused = item.body.id === focusedBodyIdRef.current;
-        const showFullDetail = item.isLandmark || isFocused;
-        item.detailGroup.visible = showFullDetail;
-        item.proxyMesh.visible = !showFullDetail;
-      });
 
       // Kay-Kee (Kayzoku) counter-rotation & "The Passing" annual alignment pulse
       if (kayHalfMesh && keeHalfMesh) {
@@ -1368,7 +1495,33 @@ export const KonranGlobe = ({
         part.obj.rotation[ax] += part.speed * stepScale;
       });
 
-      // 6. Night City Lights & Globe Pins Horizon Culling + Sub-Map Portal Reticles
+      // 6. Update Diegetic 2D Screen-Space Target Reticles for all 10 Celestial Bodies in SOLAR view
+      const mountW = mount.clientWidth;
+      const mountH = mount.clientHeight;
+      if (isSystem && mountW > 0 && mountH > 0) {
+        CANONICAL_SOLAR_SYSTEM.forEach((body) => {
+          const el = reticleElsRef.current[body.id];
+          if (!el) return;
+          if (body.type === 'sun' && sunHolderGroup) {
+            sunHolderGroup.getWorldPosition(focusedBodyWorldPos);
+          } else {
+            const item = planetOrbitMeshes.find((p) => p.body.id === body.id);
+            if (!item) return;
+            item.mesh.getWorldPosition(focusedBodyWorldPos);
+          }
+          focusedBodyWorldPos.project(camera);
+          if (focusedBodyWorldPos.z > 1) {
+            el.style.opacity = '0';
+            return;
+          }
+          const screenX = Math.max(46, Math.min(mountW - 46, (focusedBodyWorldPos.x * 0.5 + 0.5) * mountW));
+          const screenY = Math.max(28, Math.min(mountH - 28, (-(focusedBodyWorldPos.y * 0.5) + 0.5) * mountH));
+          el.style.transform = `translate3d(${screenX.toFixed(1)}px, ${screenY.toFixed(1)}px, 0) translate(-50%, -50%)`;
+          el.style.opacity = '1';
+        });
+      }
+
+      // 7. Night City Lights & Globe Pins Horizon Culling + Sub-Map Portal Reticles
       if (planet.visible) {
         cameraDir.copy(camera.position).normalize();
         const pulse = 0.5 + 0.5 * Math.sin(performance.now() * 0.0045);
@@ -1467,11 +1620,59 @@ export const KonranGlobe = ({
   }, []);
 
   return (
-    <div
-      ref={mountRef}
-      className="konran-globe w-full h-full cursor-grab active:cursor-grabbing"
-      role="img"
-      aria-label="Interactive 3-tier celestial globe and solar system of Konran"
-    />
+    <div className="relative w-full h-full overflow-hidden">
+      <div
+        ref={mountRef}
+        className="konran-globe w-full h-full cursor-grab active:cursor-grabbing"
+        role="img"
+        aria-label="Interactive 3-tier celestial globe and solar system of Konran"
+      />
+      {zTier === 'system' && (
+        <div
+          className="pointer-events-none absolute inset-0 z-10 overflow-hidden"
+          aria-label="Celestial target reticles"
+        >
+          {CANONICAL_SOLAR_SYSTEM.map((body) => {
+            const shortName = body.name.split(' (')[0];
+            const isOuter = body.orbitRadius >= 10;
+            const isSelected = focusedBodyId === body.id;
+            return (
+              <button
+                key={body.id}
+                ref={(el) => {
+                  reticleElsRef.current[body.id] = el;
+                }}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  playOptionSelect();
+                  onCelestialBodyClickRef.current?.(body);
+                }}
+                title={`Lock Orbit: ${body.name}`}
+                style={{
+                  left: 0,
+                  top: 0,
+                  opacity: 0,
+                  borderColor: `${body.color}88`,
+                }}
+                className={`pointer-events-auto absolute flex items-center gap-1 rounded-full border bg-zinc-950/75 px-1.5 py-0.5 text-[9px] font-mono tracking-wider uppercase backdrop-blur-sm transition-colors hover:scale-110 hover:border-amber-300 hover:bg-zinc-900/95 ${
+                  isSelected
+                    ? 'ring-1 ring-amber-400 text-amber-200'
+                    : isOuter
+                    ? 'text-zinc-100 shadow-[0_0_10px_rgba(0,0,0,0.8)]'
+                    : 'text-zinc-300/90'
+                }`}
+              >
+                <span
+                  className="inline-block h-1.5 w-1.5 rounded-full"
+                  style={{ backgroundColor: body.color, boxShadow: `0 0 6px ${body.color}` }}
+                />
+                <span>{shortName}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 };

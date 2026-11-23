@@ -18,6 +18,7 @@ export interface AetherStation {
   id: string;
   channelNumber: number; // 1..9 -> CH-01..CH-09
   code: string;
+  frequencyMhz: string; // 6-digit Nixie frequency format e.g. "088.90"
   name: string;
   subtitle: string;
   playlistId?: string;
@@ -25,6 +26,9 @@ export interface AetherStation {
   baseFreqHz: number;
   harmonicRatio: number;
   phosphorColor: string;
+  isHiddenFrequency?: boolean;
+  secretMorsePayload?: string;
+  secretDecodedText?: string;
 }
 
 export const CURATED_AETHER_STATIONS: AetherStation[] = [
@@ -32,67 +36,92 @@ export const CURATED_AETHER_STATIONS: AetherStation[] = [
     id: 'nyne-net-lofi',
     channelNumber: 1,
     code: 'CH-01',
+    frequencyMhz: '088.90',
     name: 'Nyne Net Lo-Fi',
     subtitle: 'Public Planetary Ley-Wave Relay',
+    playlistId: 'PL4fGSI1pDJn6puJdseH2Rt9sMvt9E2M4i',
     videoId: 'jfKfPfyJRdk',
     baseFreqHz: 220.0,
     harmonicRatio: 1.5,
-    phosphorColor: '#39ff14',
+    phosphorColor: '#39FF14',
   },
   {
     id: 'kamp-study-hall',
     channelNumber: 2,
     code: 'CH-02',
+    frequencyMhz: '094.40',
     name: 'K.A.M.P. Study Hall',
     subtitle: 'Academy Quadrangle Acoustic Bells',
+    playlistId: 'PL6NdkXsPL07KN01gH2vucrHCEyyNmVEx4',
     videoId: '4xDzrJKXOOY',
     baseFreqHz: 247.5,
     harmonicRatio: 1.25,
-    phosphorColor: '#38bdf8',
+    phosphorColor: '#39FF14',
   },
   {
     id: 'corenet-synthwave',
     channelNumber: 3,
     code: 'CH-03',
+    frequencyMhz: '101.70',
     name: 'CoreNet Synthwave',
     subtitle: 'Layer -1 ARPANET Carrier Pulse',
+    playlistId: 'PLyIFQr1wryPJ4ff23_s3_bfp26sW_d9gq',
     videoId: '4xDzrJKXOOY',
     baseFreqHz: 278.44,
     harmonicRatio: 2.0,
-    phosphorColor: '#fbbf24',
+    phosphorColor: '#39FF14',
   },
   {
     id: 'oray-dragonfire',
     channelNumber: 4,
     code: 'CH-04',
+    frequencyMhz: '108.00',
     name: 'Oray Dragonfire Ambience',
     subtitle: 'Caldera Forge & Obsidian Resonance',
+    playlistId: 'PLv3TTBr1W_9tppikBxAE_G6qjWdBljBHJ',
     videoId: '5qap5aO4i9A',
     baseFreqHz: 313.24,
     harmonicRatio: 1.333,
-    phosphorColor: '#f97316',
+    phosphorColor: '#39FF14',
   },
   {
     id: 'slavyna-velvet-lounge',
     channelNumber: 5,
     code: 'CH-05',
+    frequencyMhz: '114.20',
     name: 'Slavyna Velvet Lounge',
-    subtitle: 'Synthelavor UnderCrust Nocturne',
+    subtitle: 'The Mydnight Rendezvous Nocturne',
+    playlistId: 'PLMC9KNkIncKtPzgY-5rmhvj7fax8fdxoj',
     videoId: 'DWcJFNfaw9c',
     baseFreqHz: 352.0,
     harmonicRatio: 1.618,
-    phosphorColor: '#f43f5e',
+    phosphorColor: '#39FF14',
   },
   {
     id: 'ousava-tidal-hymns',
     channelNumber: 6,
     code: 'CH-06',
+    frequencyMhz: '122.60',
     name: 'Ousava Tidal Hymns',
     subtitle: 'Vaya Mar & Lantyca Deep Currents',
     videoId: 'kgx4WGK0oNU',
     baseFreqHz: 396.0,
     harmonicRatio: 1.125,
-    phosphorColor: '#a855f7',
+    phosphorColor: '#39FF14',
+  },
+  {
+    id: 'keztox-numbers-station',
+    channelNumber: 9,
+    code: 'CH-09',
+    frequencyMhz: '133.70',
+    name: 'Keztox Numbers Station [ENCRYPTED]',
+    subtitle: 'Layer -1 // Krayvuk Singularity Morse Carrier',
+    baseFreqHz: 680.0,
+    harmonicRatio: 2.5,
+    phosphorColor: '#39FF14',
+    isHiddenFrequency: true,
+    secretMorsePayload: '... --- ... / -.- . --.. - --- -..- / -... .-.. .. -. -.. / ... .--. --- - / .- - / ..--- ....- ---.. -----',
+    secretDecodedText: 'SOS // KEZTOX BLIND SPOT AT 24:80 KONRAN STANDARD TIME',
   },
 ];
 
@@ -567,25 +596,55 @@ export const AetherWaveRadio: React.FC<AetherWaveRadioProps> = ({
             )}
           </div>
 
-          {/* Warm Glowing Nixie Tube Display Housing */}
-          <div className="aether-nixie-housing">
-            <div className="flex items-center gap-1.5">
-              <div className="aether-nixie-tube" title="Active Aether Channel">
-                {channelNumberFormatted}
+          {/* 6-Digit Nixie Tube Frequency & Channel Display Housing */}
+          <div className="aether-nixie-housing flex-col gap-2">
+            <div className="w-full flex items-center justify-between gap-1.5">
+              {/* 6-Digit Nixie Frequency Readout (e.g. 0 8 8 . 9 0 MHz) */}
+              <div className="flex items-center gap-0.5" title="6-Digit Nixie Carrier Frequency (MHz)">
+                {(activeStation.frequencyMhz || '088.90').split('').map((ch, idx) => (
+                  <span
+                    key={idx}
+                    className="px-1.5 py-0.5 rounded bg-black/90 border border-orange-500/50 text-orange-400 font-mono text-xs font-bold shadow-[0_0_8px_rgba(251,146,60,0.45),inset_0_0_4px_rgba(251,146,60,0.3)]"
+                  >
+                    {ch}
+                  </span>
+                ))}
+                <span className="text-[8.5px] font-mono text-amber-400/80 ml-1">MHz</span>
               </div>
-              <div className="aether-nixie-tube" title="Active Track Index">
-                {trackIndexFormatted}
+
+              <div className="flex items-center gap-1">
+                <div className="aether-nixie-tube text-[10px]" title="Active Aether Channel">
+                  {channelNumberFormatted}
+                </div>
+                <div className="aether-nixie-tube text-[10px]" title="Active Track Index">
+                  {trackIndexFormatted}
+                </div>
               </div>
             </div>
 
-            <div className="text-right min-w-0 flex-1 pl-2">
+            <div className="w-full flex items-center justify-between text-left">
               <div className="text-[11px] font-bold text-amber-200 truncate">
                 {activeCustomId ? `YT Custom (${activeCustomId})` : activeStation.name}
               </div>
-              <div className="text-[9px] text-amber-400/70 truncate">
+              <div className="text-[9px] text-amber-400/70 truncate ml-2">
                 {activeStation.subtitle}
               </div>
             </div>
+
+            {/* Hidden Frequency Morse Code Intercept Banner (133.70 MHz CH-09) */}
+            {activeStation.isHiddenFrequency && (
+              <div className="w-full p-2 rounded bg-emerald-950/80 border border-[#39FF14]/60 text-[#39FF14] font-mono text-[9.5px] space-y-0.5">
+                <div className="font-bold uppercase tracking-wider">
+                  ⚡ HIDDEN FREQUENCY 133.70 MHz INTERCEPTED (CONFIG_RADIO):
+                </div>
+                <div className="text-amber-300 tracking-widest truncate">
+                  {activeStation.secretMorsePayload}
+                </div>
+                <div className="text-white/90">
+                  DECODED: {activeStation.secretDecodedText}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Live Animated Phosphor Oscilloscope Canvas */}
